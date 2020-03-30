@@ -1,0 +1,6 @@
+
+
+E:/Dropbox/Altera/CoCo3FPGA_FDD/Video_DAC.v
+
+May 25 10PM:02:22>: File E:/Dropbox/Altera/CoCo3FPGA_FDD/Video_DAC.v does not exist.
+Do you want to create the file?
