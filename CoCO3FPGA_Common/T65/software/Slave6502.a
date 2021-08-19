@@ -1,0 +1,1104 @@
+;/******************************************************************************
+; Test build to seperate read writeable memory from read only memory
+;/******************************************************************************
+;* Memory Map for 6502
+;*
+;* 0000-07FF	RAM/ROM
+;* 0800-EFFF	NA
+;* F400			Day of Week
+;* F401			Seconds
+;* F402			Minutes
+;* F403			Hours
+;* F404			Day
+;* F405			Month
+;* F406			Year
+;* F407			Century
+;* F408			Extended Drive Select from 6809
+;* F409			Sector from 6809			(LSN 0-7)
+;* F40A			Track Regular from 6809		(LSN 8-15)
+;* F40B			Track Regular from 6502
+;* F40C			Track Extended from 6809	(LSN 16-23)
+;* F40D			Track Extended from 6502
+;* F40E			Disk Command from 6809
+;* F40F			Data Extended from 6809
+;* F410			DISK Status from 6502
+;* F411			Control Bits from 6502
+;*						Bit 7			IMM_HALT_09		Halt from 6502 to 6809
+;*						Bit 6			HALT_09_EN		Halt Enable when 256 read / write is finished
+;*						Bit 5			NMI_09_EN		Immediate NMI
+;*						Bit 4			IRQ_09_EN		IRQ to 6809 for No-Halt drivers
+;*						Bit 3			ADDR_RESET_N	Reset memory pointer to beginning of buffer
+;*						Bit 2			WAIT_HALT
+;*						Bit 1			BUSY_HALT_N		Halt until 6502 is ready if 6809 goes too fast
+;*                      Bit 0           IRQ_RESET       Used to reset the Interrupt going to 6502
+;* F412			Controller Status
+;*						Bit 7			HALT
+;*                      Bit 6           Buffer is 256
+;*						Bit 4			WiFi Read FIFO Write Full
+;*                      Bit 3           WiFi Write FIFO Read not empty
+;*                      Bit 2           Read FIFO Write Full           
+;*						Bit 1			Write FIFO Read not empty
+;*						Bit 0			UPDATE		Pseudo-minute
+;* F413			Interrupt Source Byte 0
+;*						Bit 7			Floppy Command Write
+;*						Bit 6			Printer (6551) Data Write
+;*						Bit 5			Serial Port 0 (6551) Data Write
+;*						Bit 4			Serial Port 1 (6551) Data Write
+;*						Bit 3			Serial Port 2 (6551) Data Write
+;*						Bit 2			Serial Port 3 (6551) Data Write
+;*						Bit 1			Serial Port 4 (6551) Data Write
+;*						Bit 0			Serial Port 5 (6551) Data Write
+;* F414			Interrupt Source Byte 1
+;*						Bit 7			Serial Port 6 (6551) Data Write
+;*						Bit 6			Serial Port 7 (6551) Data Write
+;*						Bit 5			Serial Port 8 (6551) Data Write
+;*						Bit 4			Serial Port 9 (6551) Data Write
+;*						Bit 3			Serial Port 10 (6551) Data Write
+;*						Bit 2			Serial Port 11 (6551) Data Write
+;*						Bit 1			Serial Port 12 (6551) Data Write
+;*						Bit 0			Serial Port 13 (6551) Data Write
+;* F415			Drive Select from 6809, modified order
+;*						Bit 7			6809 Halt Enable
+;*						Bit 6			Density
+;*						Bit 5			Write Precompensation
+;*						Bit 4			Motor On
+;*						Bit 3			Drive Select 3 (Side Select)
+;*						Bit 2			Drive Select 2
+;*						Bit 1			Drive Select 1
+;*						Bit 0			Drive Select 0
+;* F416			Trace
+;* F417			Track 1
+;* F418			Track 2
+;* F419			Heads
+;* F41A			FIFO Read / Write
+;* F41B			I2C Device
+;* F41C			I2C Register
+;* F41D			I2C Data
+;* F41E			I2C Status
+;*              
+;* F500-F57F	6850 UART
+;* F580-F5fF	6850 UART WiFi
+;*              
+;* FE00-FFFF	Disk Buffer / 6502 Vectors
+;*******************************************************************************/
+DOFW			.EQU	$F400			;Day of the week (0-6)
+SECONDS			.EQU	$F401			;Seconds (0-59)
+MINUTE			.EQU	$F402			;Minute (0-59)
+HOURS			.EQU	$F403			;Hours (0-23)
+DAY				.EQU	$F404			;Day (1-31)
+MONTH			.EQU	$F405			;Month (1-12)
+YEAR			.EQU	$F406			;Year (0-99)
+CENTURY			.EQU	$F407			;Year / 100 (20)
+DRIVE_SEL_EXT	.EQU	$F408
+SECTOR			.EQU	$F409
+TRACK_REG_W		.EQU	$F40A
+TRACK_REG_R		.EQU	$F40B
+TRACK_EXT_W		.EQU	$F40C
+TRACK_EXT_R		.EQU	$F40D
+COMMAND			.EQU	$F40E
+DATA_EXT		.EQU	$F40F
+STATUS			.EQU	$F410
+HEAD_LOAD_1		.EQU	$20
+TRACK_ZERO_1	.EQU	$04
+ECC_ERR_2		.EQU	$08
+LOST_DATA3		.EQU	$04
+DRQ_2			.EQU	$02
+CONTROL			.EQU	$F411
+IMM_HALT_09		.EQU	$80					;Immediate Halt from 6502 to 6809
+HALT_100_09		.EQU	$40					;NMI Enable when 256 read / write is finished
+NMI_09_EN		.EQU	$20					;Generate NMI to 6809
+IRQ_09_EN		.EQU	$10					;IRQ to 6809 for No-Halt drivers
+ADDR_RESET_N	.EQU	$08					;Reset memory pointer to beginning of buffer
+WAIT_HALT		.EQU	$04					;Halt if needed during time / head updates
+CMD_RST			.EQU	$02					;Halt until 6502 accepts command
+IRQ_RESET		.EQU	$01					;BUSY
+CONT_STATUS		.EQU	$F412
+HALT_SIG		.EQU	$80
+ADDR_100		.EQU	$40
+WF_RDFIFO_WRFULL .EQU	$10
+WF_WRFIFO_RDEMPTY .EQU	$08
+RDFIFO_WRFULL	.EQU	$04
+WRFIFO_RDEMPTY	.EQU	$02
+UPDATE			.EQU	$01
+IRQ_STATUS0		.EQU	$F413
+FLOPPY			.EQU	$80
+;IRQ_STATUS1		.EQU	$F414 seems to not be used
+DRIVE_SEL		.EQU	$F415
+HALT_EN			.EQU	$80
+DENSITY			.EQU	$40
+WRT_PREC		.EQU	$20
+MOTOR			.EQU	$10
+DRIVES			.EQU	$0F
+TRACE			.EQU	$F416
+TRACK1			.EQU	$F417
+TRACK2			.EQU	$F418
+HEADS			.EQU	$F419
+FIFO_DATA		.EQU	$F41A
+I2C_DEVICE		.EQU	$F41B
+I2C_REG			.EQU	$F41C
+CODEC_DEV		.EQU	$34
+I2C_DATA_IN		.EQU	$F41D
+I2C_DATA_OUT	.EQU	$F41D
+I2C_STATUS		.EQU	$F41E				;Read
+I2C_CONTROL		.EQU	$F41E				;Write
+I2C_DONE		.EQU	$80					;Read only
+POWERONRESET    .EQU    $80                 ;Write only
+I2C_FAIL		.EQU	$40					;Read only
+I2C_START		.EQU	$20					;Read / Write
+WF_FIFO_DATA	.EQU	$F41F
+UART_STATUS		.EQU	$F500
+RDRF			.EQU	$01
+TDRE			.EQU	$02
+UART_CONTROL	.EQU	$F500
+UART_DATA		.EQU	$F501
+WF_UART_STATUS	.EQU	$F580
+WF_UART_CONTROL	.EQU	$F580
+WF_UART_DATA	.EQU	$F581
+DATA_REG		.EQU	$F600				;F600-F7FF
+
+				.ORG	$0000
+
+;/******************************************
+;RESTORE			$03
+;SEEK				$17
+;STEP				$23
+;STEP IN			$43
+;STEP OUT			$63
+;READ SECTOR		$80
+;WRITE SECTOR		$A0
+;READ ADDRESS		$C0
+;FORCE INTERRUPT	$D0
+;READ TRACK			$E4
+;WRITE TRACK		$F4
+;*******************************************
+TABLE
+RESTORE_VEC
+				.DW	RESTORE					; $0X
+SEEK_VEC
+				.DW	SEEK					; $1X
+STEP_VEC
+				.DW	STEP					; $2X
+STEP_VEC_2
+				.DW	STEP					; $3X
+STEP_IN_VEC
+				.DW	STEP_IN					; #4X
+STEP_IN_VEC_2
+				.DW	STEP_IN					; $5X
+STEP_OUT_VEC
+				.DW	STEP_OUT				; $6X
+STEP_OUT_VEC_2
+				.DW	STEP_OUT				; $7X
+READ_SECTOR_VEC
+				.DW	READ_SECTOR				; $8X
+READ_SECTOR_NOH_VEC
+				.DW	READ_SECTOR_NOH			; $9X
+WRITE_SECTOR_VEC
+				.DW	WRITE_SECTOR			; $AX
+WRITE_SECTOR_NOH_VEC
+				.DW	WRITE_SECTOR_NOH		; $BX
+READ_ADDRESS_VEC
+				.DW	READ_ADDRESS			; $CX
+FORCE_INTERRUPT_VEC
+				.DW	FORCE_INT				; $DX
+READ_TRACK_VEC
+				.DW	READ_TRACK				; $EX
+WRITE_TRACK_VEC
+				.DW	WRITE_TRACK				; $FX
+
+CODEC			.DB		$97					;REG 00
+				.DB		$97					;REG 02
+				.DB		$7C					;REG 04
+				.DB		$7C					;REG 06
+				.DB		$12					;REG 08
+				.DB		$04					;REG 0A
+				.DB		$60					;REG 0C
+				.DB		$56					;REG 0E
+				.DB		$E3					;REG 10
+				.DB		$01					;REG 12
+
+CHK_TME			.DB		$00
+POR				.DB		$01					; Slave processor generates a special reset only at first power up
+SIDES			.DB		$00, $00, $00, $00
+TRACKS			.DB		$00, $00, $00, $00, $00, $00, $00, $00
+STATUS_BUF		.DB		$00
+SECTOR_BUF		.DB		$00
+MEM_CMD			.DB		$00
+NOHLT			.DB		$00
+JMP_VEC			.DW		BAD_CMD				;Init Jump Vector to point to bad command
+BLOCK0			.DB		$00
+BLOCK1			.DB		$00
+BLOCK2			.DB		$00
+DIRECTION		.DB		$00
+DRV_SEL			.DB		$00
+LOOP_COUNT		.DB		$00
+DRV_NUM			.DB		$00
+TEMP0			.DB		$00
+TEMP1			.DB		$00
+TEMP2			.DB		$00
+
+				.ORG	$2000
+;RST_VEC			JMP		START
+;IRQ_VEC			JMP		INT					;3 Vector to Interrupt service routine
+
+RST_VEC
+START			CLD							; Binary mode
+				SEI							; Turn off interrupts
+				LDX		#$FF
+				STX		TRACE
+				TXS
+				LDA		#$00
+				STA		NOHLT
+				LDA		#IMM_HALT_09
+				STA		CONTROL				; Init Control to halt 6809
+				LDA		#$15				; 8-N-1
+				STA		UART_CONTROL
+				STA		WF_UART_CONTROL
+KILL_NOISE		JSR		GET_BYTE			;In case we are in the middle of a previous command when the RESET button is pushed
+				BCS		KILL_NOISE
+				LDA		#$49				; Send DW Init Transaction
+				JSR		PUT_BYTE
+                LDA     POR			        ; Check power on flag
+                BEQ     NOT_POWERON         ; Not first power on
+                LDA     #POWERONRESET       ; Hit power on reset to clear keyboard
+                STA     I2C_CONTROL         ; Gets cleared during I2C transaction
+                LDA     #$00                ; Clear power on flag so this does not run again until next power on
+                STA     POR
+NOT_POWERON		LDX		#$00
+				LDA		#CODEC_DEV
+				STA		I2C_DEVICE
+				LDA		#$1E
+				STA		I2C_REG
+				LDA		#$00
+I2C_LP			STA		I2C_DATA_OUT
+INITED			LDA		I2C_STATUS			;Make sure it is done before starting next
+				BPL		INITED
+				LDA		#I2C_START
+				STA		I2C_CONTROL
+WAIT_NDONE		LDA		I2C_STATUS
+				BMI		WAIT_NDONE
+				LDA		#$00
+				STA		I2C_CONTROL
+WAIT_DONE		LDA		I2C_STATUS
+				BPL		WAIT_DONE
+				CPX		#$09
+				BEQ		RUN
+				JSR		DELAY				;3597 Clock delay
+				INX
+				TXA
+				CLC
+				ROL		A
+				STA		I2C_REG
+				LDA		CODEC,X
+				JMP		I2C_LP
+RUN				LDA		#$00				; No longer halt system
+				STA		CONTROL
+				CLI							; Enable Interrupts
+;
+;Main code Loop
+;
+LOOP			LDA		#$01
+				STA		TRACE
+				STA		CHK_TME
+; Becker Interface
+CHK_WR1			LDA		CONT_STATUS
+				AND		#WRFIFO_RDEMPTY
+				BEQ		CHK_RD1
+				LDA		FIFO_DATA
+				JSR		PUT_BYTE
+CHK_RD1			LDA		UART_STATUS			; Check to see if there is data in the BI
+				LSR		A
+				BCC		CHK_WR12			; No
+				JSR		GET_BYTE			; Yes, put it in the FIFO
+				STA		FIFO_DATA
+; WiFi Interface
+CHK_WR12		LDA		CONT_STATUS
+				AND		#WF_WRFIFO_RDEMPTY
+				BEQ		CHK_RD12
+				LDA		WF_FIFO_DATA
+				JSR		PUT_BYTE2
+CHK_RD12		LDA		WF_UART_STATUS
+				LSR		A
+				BCC		NEXT1				; No
+				JSR		GET_BYTE2			; Yes, put it in the FIFO
+				STA		WF_FIFO_DATA
+
+NEXT1			LDA		CONT_STATUS			; Read PSEUDO Minute to throttle Time update
+				AND		#UPDATE
+				BEQ		CHK_WR1
+				LDA		#$02
+				STA		TRACE
+; Becker Interface
+CHK_WR2			LDA		CONT_STATUS
+				AND		#WRFIFO_RDEMPTY
+				BEQ		CHK_RD2
+				LDA		FIFO_DATA
+				JSR		PUT_BYTE
+CHK_RD2			LDA		UART_STATUS			; Check to see if there is data in the BI
+				LSR		A
+				BCC		CHK_WR22			; No
+				JSR		GET_BYTE			; Yes, put it in the FIFO
+				STA		FIFO_DATA
+; WiFi Interface
+CHK_WR22		LDA		CONT_STATUS
+				AND		#WF_WRFIFO_RDEMPTY
+				BEQ		CHK_RD22
+				LDA		WF_FIFO_DATA
+				JSR		PUT_BYTE2
+CHK_RD22		LDA		WF_UART_STATUS		; Check to see if there is data in the BI
+				LSR		A
+				BCC		NEXT2				; No
+				JSR		GET_BYTE2			; Yes, put it in the FIFO
+				STA		WF_FIFO_DATA
+
+NEXT2			LDA		CONT_STATUS			; Read PSEUDO Minute to throttle Time update
+				AND		#UPDATE
+				BNE		CHK_WR2
+				LDA		#$01
+				STA		CHK_TME				; Flag interrupt routine to check the time / sides
+TCHECK			JMP		LOOP
+
+; Interrupt service routine
+; Disk Transfers
+
+IRQ_VEC
+INT				SEI							;2 Disable Interrupts
+				PHA							;3 Save Registers
+				LDA		COMMAND				;4 Save command
+				STA		MEM_CMD				;4 Save command for later
+				LDA		CHK_TME             ; Check the Pseudo Second (~17 seconds)
+				BEQ		DISK                ; If not skip
+				JSR		SP_SIDES            ; If so, check Disks 0-2 for double sided
+DISK			LDA		#IRQ_RESET			; Flag busy / reset IRQ
+				STA		CONTROL
+				LDA		#$14				;2
+				STA		TRACE				;4
+				LDA		MEM_CMD
+				AND		#$F0				;2
+				CLC							;2
+				ROR		A					;2
+				ROR		A					;2
+				ROR		A					;2
+				TAX							;2
+				LDA 	TABLE,X				;4
+				STA		JMP_VEC				;4
+				STA		TRACE
+				LDA 	TABLE+1,X			;4
+				STA		JMP_VEC+1			;4
+				JMP		(JMP_VEC)			;5
+											;=74
+
+
+FORCE_INT		LDA		#$11
+				STA		TRACE
+				LDA		#IRQ_RESET+CMD_RST	; Flag busy / reset IRQ
+				STA		CONTROL
+				JSR		CALC_SEL
+				BCS		NO_SAVE
+				ASL		A					;2
+				TAX							;2
+				LDA		TRACK_REG_R			;4
+				STA		TRACKS,X			;5
+				LDA		TRACK_EXT_R			;4
+				STA		TRACKS+1,X			;5
+NO_SAVE			LDA		TRACK_REG_R			;4 Check LSB if track 0
+				BNE		TYP1_NOT0			;3 Nope
+				LDA		TRACK_EXT_R			;4 Check MSB if track 0
+				BEQ		TRAK_ZERO			;3 Yes
+TYP1_NOT0		LDA		#$00				;2 No errors
+				BEQ		GEN_NMI				;4 BRA to Generate NMI
+TRAK_ZERO		LDA		#TRACK_ZERO_1		;2 Set Status to track 0
+GEN_NMI			STA		STATUS				;4
+				LDA		#$05
+				STA		TRACE
+				LDA		COMMAND				;4 Check if we got a new command
+				BNE		DISK				; if so jump back to DISK
+				LDA		MEM_CMD
+				CMP		#$D0				;2 Is command Forced Interupt with no Int
+				BEQ		NO_NMI				;3 Yes, skip NMI
+DO_NMI			LDA		#NMI_09_EN+IRQ_RESET	;2 NMI and turn off any halts
+				STA		CONTROL				;4
+				JSR		RETURN				;6+6
+NO_NMI			LDA		#$00				;2 Clear CONTROL for next command
+				STA		CONTROL				;4
+INT_EXIT2		PLA							;4 Restore Register
+				RTI							;6 return from interrupt
+
+;/******************************************
+;* Type 1 (Head movement)
+;*******************************************
+RESTORE			LDA		#$06
+				STA		TRACE
+				LDA		#$00				; Set Track to 0000
+				STA		TRACK_REG_R
+				STA		TRACK_EXT_R
+DIR_OUT			LDA		#$FF				; Set direction to out
+				STA		DIRECTION
+				JMP		FORCE_INT
+
+SEEK			LDA		#$07
+				STA		TRACE
+				LDA		DATA_REG			; Copy DATA to Track
+				STA		TRACK_REG_R
+				LDA		DATA_EXT
+				STA		TRACK_EXT_R
+				CMP		TRACK_EXT_W			; Calculate Direction NEW - OLD
+				BNE		TEST_TRACK
+				LDA		TRACK_REG_R
+				CMP		TRACK_REG_W			; New - Old
+TEST_TRACK		BMI		DIR_OUT				; NEGATIVE = DIRECTION OUT
+DIR_IN			LDA		#$01
+				STA		DIRECTION
+				JMP		FORCE_INT
+
+STEP			LDA		#$08
+				STA		TRACE
+				LDA		DIRECTION			; If direction is out
+				BMI		STEP_OUT			; Step out
+
+STEP_IN			LDA		#$09
+				STA		TRACE
+				LDA		TRACK_REG_R			; Track + 1
+				CLC
+				ADC		#$01
+				STA		TRACK_REG_R
+				LDA		TRACK_EXT_R
+				ADC		#$00
+				STA		TRACK_EXT_R
+				BCC		DIR_IN				; Did we overflow?
+				LDA		#$FF				; Yes, set track to max
+				STA		TRACK_REG_R
+				STA		TRACK_EXT_R
+NOT_OVER		JMP		DIR_IN
+
+STEP_OUT		LDA		#$0A
+				STA		TRACE
+				LDA		TRACK_REG_R			; Track - 1
+				SEC
+				SBC		#$01
+				STA		TRACK_REG_R
+				LDA		TRACK_EXT_R
+				SBC		#$00
+				STA		TRACK_EXT_R
+				BCC		IS_0
+				JMP		DIR_OUT				; Did we underflow?
+IS_0			LDA		#$00				; Set track to 0000
+				STA		TRACK_REG_R
+				STA		TRACK_EXT_R
+				JMP		DIR_OUT
+;/*****************************************************************************
+;* Type 2 (Read / Write Sectors)
+;******************************************************************************
+;* Read Sector
+;* Entry
+;* Exit
+;*	Buffer	Sector Data
+;*	A		Status Register
+;******************************************************************************/
+READ_SECTOR		LDA		#$0B
+				STA		TRACE
+WAIT_READ_0		LDA		CONT_STATUS			; Wait until everything is ready and the system is halted
+				BPL		WAIT_READ_0
+				LDA		#IMM_HALT_09+CMD_RST+IRQ_RESET	;Clear the Command register
+				STA		CONTROL
+				JSR		CALC_SEL
+				BCS		NO_NEED				; No need to restore tracks
+				ASL		A					; DRIVE NUMBER * 2
+				TAX							; INDEX INTO 2 BYTE PER ENTRY TABLE
+				LDA		TRACKS,X			; RESTORE TRACK
+				STA		TRACK_REG_R
+				LDA		TRACKS+1,X
+				STA		TRACK_EXT_R
+NO_NEED			LDA		SECTOR
+				STA		SECTOR_BUF
+				JSR		CALC_BLOCK			; Calculate block from track and sector
+				JSR		GET_SECTOR			; Read the sector into the buffer
+				LDA		#DRQ_2
+				STA		STATUS				; Set status to DRQ
+
+;Turn off Halt and BUSY_HALT_N, turn on Halt when address is $100 and turn on address increment
+				LDA		#HALT_100_09+ADDR_RESET_N+IRQ_RESET
+				STA		CONTROL
+;UNHALT_READ		LDA		CONT_STATUS			; Wait until the system is not halted
+;				BMI		UNHALT_READ
+				JSR		CHK_ERR
+				STA		TEMP0				; Store status
+WAIT_READ		LDA		CONT_STATUS			;Wait until the sector has been read and 6809 is again halted
+				BPL		WAIT_READ
+											; probably need a timeout here
+				LDA		TEMP0				; Retrieve status
+				JMP		GEN_NMI				; Generate NMI and exit
+
+;****************************************
+;* Read the sector over the serial port
+;* Entry
+;* BLOCK2		MSB LSN
+;* BLOCK1		Middle LSN
+;* BLOCK0       LSB LSN
+;* DRV_NUM		Drive Number
+;*
+;* Exit
+;* Buffer       Sector data
+;* A			Status Register
+;****************************************
+GET_SECTOR
+RD_SER			LDA		#$D2				; Read Sector COMMAND
+				JSR		PUT_BYTE
+				LDA		DRV_NUM				; RETREIVE drive select
+				JSR		PUT_BYTE
+				LDA		BLOCK2				; LSN MSB
+				JSR		PUT_BYTE
+				LDA		BLOCK1				; LSN Middle
+				JSR		PUT_BYTE
+				LDA		BLOCK0				; LSN LSB
+				JSR		PUT_BYTE
+				LDX		#$00
+				STX		TEMP0				; Zero Checksum
+				STX		TEMP1
+				STX		TEMP2
+FIRST			JSR		GET_BYTE			;Get first byte
+				BCS		STORE				;Got a byte then store
+				LDA		TEMP2				;Else try again for slow systems
+				ADC		#$01
+				STA		TEMP2
+				BNE		FIRST
+				BEQ		FLG_ERR				;if we did not get the first byte, flag error
+READ_LOOP		JSR		GET_BYTE
+STORE			STA		DATA_REG,X
+				CLC
+				ADC		TEMP0				; Calculate checksum
+				STA		TEMP0
+				LDA		TEMP1				;Add carry
+				ADC		#$00
+				STA		TEMP1
+				INX							;Increment ro nrxt location
+				BNE		READ_LOOP			; if then we got 256 bytes
+CHECKSUM		LDA		TEMP1				; Send Checksum
+				JSR		PUT_BYTE
+				LDA		TEMP0
+				JSR		PUT_BYTE
+				RTS
+
+CHK_ERR			JSR		GET_BYTE			; Get Acknowledge
+				BCS		GOT_ACK
+				LDA		TEMP2
+				ADC		#$01
+				STA		TEMP2
+				BNE		CHK_ERR
+FLG_ERR			LDA		#$01				; Anything but 0 will flag error
+GOT_ACK			BEQ		NO_ECC_ERR			; If not 0 then error
+				LDA		#ECC_ERR_2			; ECC error
+NO_ECC_ERR		RTS
+
+;******************************************************************************
+;* Write Sector
+;* Entry
+;*	Buffer	Sector Data
+;* Exit
+;*	A		Status Register
+;******************************************************************************/
+WRITE_SECTOR	LDA		#$0C
+				STA		TRACE
+WAIT_WRITE_0	LDA		CONT_STATUS			; Wait until everything is ready and the system is halted
+				BPL		WAIT_WRITE_0
+				LDA		#DRQ_2
+				STA		STATUS
+; Allow buffer pointer increment, Halt 6809 when buffer filled, and release busy_halt
+				LDA		#HALT_100_09+ADDR_RESET_N+CMD_RST+IRQ_RESET
+				STA		CONTROL
+UNHALT_WRITE	LDA		CONT_STATUS			; Wait until the system is not halted
+				BMI		UNHALT_WRITE
+WAIT_WRITE		LDA		CONT_STATUS			; WAIT UNTIL SECTOR IS IN BUFFER and the 6809 is halted again
+				BPL		WAIT_WRITE
+											; Probably need a timeout here
+				LDA		#IMM_HALT_09+IRQ_RESET	; Keep the system halted until we write the sector
+				STA		CONTROL
+				JSR		CALC_SEL
+				BCS		NO_NEED2			; No need to restore tracks
+				ASL		A
+				TAX
+				LDA		TRACKS,X
+				STA		TRACK_REG_R
+				LDA		TRACKS+1,X
+				STA		TRACK_EXT_R
+NO_NEED2		LDA		SECTOR
+				STA		SECTOR_BUF
+				JSR		CALC_BLOCK			; Calculate block from track and sector
+				JSR		PUT_SECTOR
+NO_ECC_ERR2		JMP		GEN_NMI
+
+;****************************************
+;* Write the sector over the serial port
+;* Entry
+;* BLOCK2		MSB LSN
+;* BLOCK1		Middle LSN
+;* BLOCK0       LSB LSN
+;* DRV_NUM		Drive Number
+;* Buffer		Sector Data
+;*
+;* Exit
+;* A			Status Register
+;****************************************
+PUT_SECTOR
+WR_SER			LDA		#$F0
+				STA		TRACE
+				LDA		#$57				; Write Sector
+				JSR		PUT_BYTE
+				LDA		DRV_NUM				; drive number
+				JSR		PUT_BYTE
+				LDA		BLOCK2				; LSN MSB
+				JSR		PUT_BYTE
+				LDA		BLOCK1				; LSN Middle
+				JSR		PUT_BYTE
+				LDA		BLOCK0				; LSN LSB
+				JSR		PUT_BYTE
+				LDX		#$00
+				STX		TEMP0				; Zero Checksum
+				STX		TEMP1
+				STX		TEMP2
+WRITE_LOOP		LDA		DATA_REG,X
+				JSR		PUT_BYTE
+				CLC
+				ADC		TEMP0
+				STA		TEMP0
+				LDA		TEMP1
+				ADC		#$00
+				STA		TEMP1
+				INX
+				BNE		WRITE_LOOP
+				LDA		TEMP1				; Send Checksum
+				JSR		PUT_BYTE
+				LDA		TEMP0
+				JSR		PUT_BYTE				
+GET_ACK_W		JSR		GET_BYTE			; Get Acknoledge
+				BCS		GOT_ACK_W
+				LDA		TEMP2
+				ADC		#$01
+				STA		TEMP2
+				BNE		GET_ACK_W
+GOT_ACK_W		BEQ		NO_ECC_ERR_2			; If not 0 then error
+				LDA		#ECC_ERR_2			; ECC error
+NO_ECC_ERR_2	RTS
+;/******************************************
+;*Write track is only for Disk format
+;*not for actually writing a track full of data
+;*******************************************
+WRITE_TRACK		LDA		#$0D
+				STA		TRACE
+WAIT_WT_0		LDA		CONT_STATUS			; Wait until everything is ready and the system is halted
+				BPL		WAIT_WT_0
+				LDA		#DRQ_2
+				STA		STATUS
+; Allow buffer pointer increment, Halt 6809 when buffer filled, and release busy_halt
+				LDA		#HALT_100_09+ADDR_RESET_N+CMD_RST+IRQ_RESET
+				STA		CONTROL
+UNHALT_WT		LDA		CONT_STATUS			; Wait until the system is not halted
+				BPL		UNHALT_WT
+				LDA		#HALT_100_09+ADDR_RESET_N+IRQ_RESET
+				STA		CONTROL
+WAIT_WT			LDA		CONT_STATUS			; WAIT UNTIL SECTOR IS IN BUFFER and the 6809 is halted again
+				BPL		WAIT_WT
+											; Probably need a timeout here
+				JSR		CALC_SEL
+				BCS		NO_NEED4			; No need to restore tracks
+				ASL		A
+				TAX
+				LDA		TRACKS,X
+				STA		TRACK_REG_R
+				LDA		TRACKS+1,X
+				STA		TRACK_EXT_R
+NO_NEED4		LDA		#$01
+SEC_LOOP		STA		SECTOR_BUF
+				JSR		CALC_BLOCK
+;				JSR		PUT_SECTOR
+				LDA		#$57				; Write Sector
+				JSR		PUT_BYTE
+				LDA		DRV_NUM				; drive number
+				JSR		PUT_BYTE
+				LDA		BLOCK2				; LSN MSB
+				JSR		PUT_BYTE
+				LDA		BLOCK1				; LSN Middle
+				JSR		PUT_BYTE
+				LDA		BLOCK0				; LSN LSB
+				JSR		PUT_BYTE
+				LDX		#$00
+				LDA		#$FF
+WRITE_LOOP_T	JSR		PUT_BYTE
+				INX
+				BNE		WRITE_LOOP_T
+				JSR		PUT_BYTE			;Checksum is FF00
+				LDA		#$00
+				JSR		PUT_BYTE
+				JSR		GET_BYTE			; Get Acknoledge
+NO_ECC_ERR3		INC		SECTOR_BUF
+				LDA		SECTOR_BUF
+				CMP		#19					; Last sector + 1
+				BNE		SEC_LOOP			; No then do next sector
+				LDA		#$00				; No errors
+				JMP		GEN_NMI				; Exit
+
+READ_TRACK		LDA		#DRQ_2
+				STA		STATUS				; Set status to DRQ
+;Turn off Halt and BUSY_HALT_N, turn on Halt when address is $100 and turn on address increment
+				LDA		#HALT_100_09+ADDR_RESET_N+CMD_RST+IRQ_RESET
+				STA		CONTROL
+UNHALT_RT		LDA		CONT_STATUS			; Wait until the system is not halted
+				BPL		UNHALT_RT
+				LDA		#HALT_100_09+ADDR_RESET_N+IRQ_RESET
+				STA		CONTROL
+WAIT_READ_RT	LDA		CONT_STATUS			;Wait until the sector has been read and 6809 is again halted
+				BPL		WAIT_READ_RT
+				LDA		#LOST_DATA3			; Flag an error
+				JMP		GEN_NMI				; branch always
+
+;*******************************************
+;* Calculate block from the Tracks and Sectors
+;*Entry
+;*TRACK_REG_R	Lower track #
+;*TRACK_EXT_R	Upper track #
+;*SECTOR_BUF	Sector #
+;*DRV_NUM		Drive number
+;*DRIVE_SEL_EXT	Double side flag
+;*DRIVE_SEL		Side select
+;*
+;*Exit
+;*BLOCK0		LSB LSN
+;*BLOCK1		Middle LSN
+;*BLOCK2		MSB LSN
+;*******************************************
+CALC_BLOCK		LDA		TRACK_REG_R			; Track X 2
+				ASL		A
+				STA		BLOCK0				;BLOCK0=Track * 2
+				STA		TEMP0				;Same for TEMP0
+				LDA		TRACK_EXT_R
+				ROL		A					;Roll carry into TRACK_ENT * 2
+				STA		BLOCK1				;BLOCK1=TRACK_EXT * 2
+				STA		TEMP1				;Same for TEMP1
+				LDA		#$00
+				ROL		A					;Roll Carry into LSB LSN
+				STA		BLOCK2
+				STA		TEMP2
+				ROL		TEMP0				; Track X 2 x8 = Track X 16
+				ROL		TEMP1
+				ROL		TEMP2
+				ROL		TEMP0
+				ROL		TEMP1
+				ROL		TEMP2
+				ROL		TEMP0
+				ROL		TEMP1
+				ROL		TEMP2
+				LDA		TEMP0				; Track X 16 + Track X 2 = Track X 18
+				ADC		BLOCK0
+				STA		BLOCK0
+				LDA		TEMP1
+				ADC		BLOCK1
+				STA		BLOCK1
+				LDA		TEMP2
+				ADC		BLOCK2
+				STA		BLOCK2
+				LDA		DRV_NUM				; get drive number
+				CMP		#$03				; is it < 3
+				BPL		NOT_DS				; No then single sided
+				TAX							; Put drive number into X
+				LDA		SIDES,X				; Load Double sided flag
+				BEQ		NOT_DS				; Is the DS flag cleared then not DS
+				ASL		BLOCK0				; DOUBLE SIDE X2
+				ROL		BLOCK1
+				ROL		BLOCK2
+				LDA		DRIVE_SEL
+				AND		#$08				; CHECK SIDE SELECT
+				BEQ		NOT_DS				; SIDE 0
+				LDA		BLOCK0				; SIDE 1, ADD 18
+				ADC		#$12
+				JSR		RIPPLE
+NOT_DS			LDX		SECTOR_BUF			; Track X 18 + (Sector-1) = Block
+				DEX							; Sectors are numbered 1-18
+				TXA
+				CLC							; Fix a bug with drive #3+
+				ADC		BLOCK0
+RIPPLE			STA		BLOCK0
+				LDA		BLOCK1
+				ADC		#$00
+				STA		BLOCK1
+				LDA		BLOCK2
+				ADC		#$00
+				STA		BLOCK2
+RETURN			RTS
+
+;/***************************************************************************************
+;* Type 3
+;****************************************************************************************/
+; This needs some work to make it more compatable
+;
+READ_ADDRESS	LDA		#$0E
+				STA		TRACE
+				LDA		#IRQ_RESET+CMD_RST
+				STA		CONTROL
+				JSR		CALC_SEL
+				BCS		NO_NEED3			; No need to restore tracks
+				ASL		A					; DRIVE NUMBER * 2
+				TAX							; INDEX INTO 2 BYTE PER ENTRY TABLE
+				LDA		TRACKS,X			; RESTORE TRACK
+				STA		TRACK_REG_R
+				LDA		TRACKS+1,X
+				STA		TRACK_EXT_R
+NO_NEED3		LDA		TRACK_REG_R
+				STA		DATA_REG
+				LDA		DRIVE_SEL_EXT
+				AND		#$80
+				BEQ		SIDE_0
+				LDA		#$01
+SIDE_0			STA		DATA_REG+1
+				LDA		SECTOR
+				STA		DATA_REG+2
+				LDA		#$01
+				STA		DATA_REG+3
+				STA		DATA_REG+4			; Hopefully I will not have to calculate CRC
+				STA		DATA_REG+5
+				LDA		#$00				; Clear Status
+				JMP		GEN_NMI
+
+;/****************************************************************************************
+;* No Halt Read Sector
+;*****************************************************************************************/
+READ_SECTOR_NOH
+				LDA		#$0F
+				STA		TRACE
+				LDA		TRACK_EXT_W
+				STA		BLOCK2
+				LDA		TRACK_REG_W
+				STA		BLOCK1
+				LDA		SECTOR
+				STA		BLOCK0
+				LDA		DRIVE_SEL_EXT
+				STA		DRV_NUM
+				LDA		#$01				; Initialize retry counter to 1
+				STA		NOHLT
+R_ERR_LOOP_NOH	JSR		GET_SECTOR
+				JSR		CHK_ERR
+				BEQ		NO_RECCERR_NOH
+				LDA		NOHLT				; Check retry count
+				CLC
+				ADC		#$01
+				STA		NOHLT
+				CMP		#$05
+				BEQ		RECCERR_NOH			; If we try 4 times, then error out
+				JMP		R_ERR_LOOP_NOH
+RECCERR_NOH		LDA		#ECC_ERR_2			; ECC error
+				BNE		SETSTAT_R
+NO_RECCERR_NOH	LDA		#$00				; No error
+SETSTAT_R		STA		STATUS				; Clear busy, set ECC in status
+				LDA		#IRQ_09_EN+ADDR_RESET_N+IRQ_RESET	; Send IRQ and turn off Address RESET
+				STA		CONTROL
+				JSR		RETURN
+				LDA		#ADDR_RESET_N+IRQ_RESET	; Turn off IRQ
+				STA		CONTROL
+WAIT_READ_NOH	LDA		CONT_STATUS			;Wait until the sector has been read and 6809 is finished
+				AND		#ADDR_100
+				BEQ		WAIT_READ_NOH
+				JMP		NO_NMI				; Exit
+
+;/****************************************************************************************
+;* No Halt Write Sector
+;*****************************************************************************************/
+WRITE_SECTOR_NOH
+				LDA		#$10
+				STA		TRACE
+				LDA		#$01				; Initialize retry counter to 1
+				STA		NOHLT
+				LDA		#ADDR_RESET_N+IRQ_RESET		; Allow buffer pointer increment
+				STA		CONTROL
+FILL_LOOP_NOH	LDA		CONT_STATUS			; WAIT UNTIL SECTOR IS IN BUFFER 
+				AND		#ADDR_100
+				BEQ		FILL_LOOP_NOH
+											; Probably need a timeout here
+				LDA		TRACK_EXT_W
+				STA		BLOCK2
+				LDA		TRACK_REG_W
+				STA		BLOCK1
+				LDA		SECTOR
+				STA		BLOCK0
+				LDA		DRIVE_SEL_EXT
+				STA		DRV_NUM
+W_ERR_LOOP_NOH	JSR		PUT_SECTOR
+				BEQ		NO_WECCERR_NOH		; If not 0 then error
+				LDA		NOHLT				; Check retry count
+				CLC
+				ADC		#$01
+				STA		NOHLT
+				CMP		#$05
+				BEQ		WECCERR_NOH			; If we try 4 times, then error out
+				JMP		W_ERR_LOOP_NOH
+WECCERR_NOH		LDA		#ECC_ERR_2			; ECC error
+				BNE		SETSTAT_W
+NO_WECCERR_NOH	LDA		#$00				; No error
+SETSTAT_W		STA		STATUS				; Clear busy, set ECC in status
+				LDA		#IRQ_09_EN+IRQ_RESET	; Send IRQ
+				STA		CONTROL
+				JSR		RETURN
+				JMP		NO_NMI				; Exit
+
+;/****************************************************************************
+;* Calculate the drive number from the select
+;* Entry
+;*	DRIVE_SEL	Holds the drive select
+;* Exit
+;*	DRV_NUM		Holds the drive number
+;*	Carry		Set if no lookup is needed
+;*****************************************************************************/
+CALC_SEL		LDA		DRIVE_SEL			;4
+				AND		#$0F				;2
+				BEQ		NO_TABLE			;2(+1)
+				LDX		#$FF				;2 load -1
+				CLC							;  Just in case
+SEL_LOOP		INX							;2 Does not affect Carry
+				ROR		A					;2 Move Select bit to Carry
+				BCC		SEL_LOOP			;2(+1) is it 1 then we found select
+				CLC							;2 Clear marker
+				TXA							;2 move drive number to A
+				BCC		SAV_SEL				;3 skip no table
+NO_TABLE		LDA		DRIVE_SEL_EXT		;0(+4) drive number is binary
+				SEC							;0(+2) set marker
+SAV_SEL			STA		DRV_NUM				;4 save drive number
+				RTS							;6 return
+											;=33
+
+PUT_BYTE		pha							;3
+wait_empty		lda		UART_STATUS			;4
+;				and		#TDRE
+				lsr		a
+				lsr		a
+				bcc		wait_empty			;2+1
+				pla							;4
+				sta		UART_DATA			;4
+				rts							;6
+											;=27
+
+PUT_BYTE2		pha							;3
+wait_empty2		lda		WF_UART_STATUS		;4
+;				and		#TDRE
+				lsr		a
+				lsr		a
+				bcc		wait_empty2			;2+1
+				pla							;4
+				sta		WF_UART_DATA		;4
+				rts							;6
+											;=27
+
+GET_BYTE
+				ldy		#$00				; 2
+				sty		LOOP_COUNT			; 3
+chk_status		lda		UART_STATUS			; 4
+;				and		#RDRF
+				lsr		a
+				bcs		found_byte			; 3
+				iny							; 2
+				bne		chk_status			; 2+1
+				LDA		LOOP_COUNT			; 3
+				ADC		#$01				; 2
+				STA		LOOP_COUNT			; 3 Add 1 to the loop counter
+				BPL		chk_status			; 2+1 if < $80
+				rts							; exit if we did not get byte fast enough
+found_byte		lda		UART_DATA			; 4
+				rts							; 6
+											;=15+128*(11+256*14)
+
+GET_BYTE2
+				ldy		#$00				; 2
+				sty		LOOP_COUNT			; 3
+chk_status2		lda		WF_UART_STATUS		; 4
+;				and		#RDRF
+				lsr		a
+				bcs		found_byte2			; 3
+				iny							; 2
+				bne		chk_status2			; 2+1
+				LDA		LOOP_COUNT			; 3
+				ADC		#$01				; 2
+				STA		LOOP_COUNT			; 3 Add 1 to the loop counter
+				BPL		chk_status2			; 2+1 if < $80
+				rts							; exit if we did not get byte fast enough
+found_byte2		lda		WF_UART_DATA		; 4
+				rts							; 6
+											;=15+128*(11+256*14)
+
+SP_SIDES		LDA		#IMM_HALT_09		; Halt the system
+				STA		CONTROL
+;				LDA		#$23				; 2	Send Time Command
+;				JSR		PUT_BYTE			; 6
+;				JSR		GET_BYTE			; 6 + 27	Get byte
+;				BCC		QUIT				; If we did not get a character, then skip processing
+;				STA		TEMP0				; 3 + 19	STORE YEAR FOR LATER CALCULATIONS
+;				LDX		#$05				; 2		Get 6 bytes
+;TIME			JSR		GET_BYTE			; 6 + 19
+;				BCC		QUIT				; If we did not get a character, then skip processing
+;				STA		DOFW,X				; 5
+;				DEX							; 2
+;				BNE		TIME				; 3
+;				JSR		GET_BYTE			; 6 + 19
+;				BCC		DISK				; Some servers do not send the last byte
+;				STA		DOFW,X				; 5
+;				LDA		#19					; YEAR 1900
+;				STA		TEMP1
+;				LDA		TEMP0
+;TIME_LOOP		BPL		TIME_FIN			; MORE THAN 128?
+;				INC		TEMP1				; YES 100 INTO CENTURY
+;				AND		#$7F				; YEAR - 128
+;				CLC
+;				ADC		#28					; YEAR + 28
+;				JMP		TIME_LOOP
+;TIME_FIN		CMP		#100
+;				BMI		UNDER
+;				INC		TEMP1
+;				SEC
+;				SBC		#100
+;UNDER			STA		YEAR
+;				LDA		TEMP1
+;				STA		CENTURY
+CHK_DRIVES  	LDA		#$00				;Prepare to check drives dir double sided
+				STA		BLOCK0
+				STA		BLOCK1
+				STA		BLOCK2
+NEXT_DRV		STA		DRV_NUM				;Current drive number
+				JSR		GET_SECTOR			; get sector 0 of current drive
+				JSR		CHK_ERR
+				BNE		BASIC_DSK			; read error means basic disk
+				ldx		DRV_NUM
+				LDA		TRACK1				; is DD.TKS = 18
+				CMP		#$12
+				BNE		BASIC_DSK			; no then basic disk
+				LDA		TRACK2				; is DD.FMT = 18
+				CMP		#$12
+				BNE		BASIC_DSK			; no then basic disk
+				LDA		HEADS				; get number of sides
+				AND		#$01
+				STA		SIDES,X				; store number of sides for current drive
+				BPL		NEXT				; go to the next drive
+BASIC_DSK		LDX		DRV_NUM
+				LDA		#$00				; basic disk means 1 side
+				STA		SIDES,X
+NEXT			INX
+				TXA
+				CMP		#$03				; WE ONLY CHECK DISK 0, 1, AND 2
+				BNE		NEXT_DRV
+				LDA		#$00
+				STA		CHK_TME
+QUIT			RTS
+
+DELAY			LDY		#$00
+DELAY_X			INY
+				TYA
+				PHA
+				PLA
+				BNE		DELAY_X
+				RTS
+
+BAD_CMD			LDA		#$AA				; If we get here, something is wrong with the Table Jump
+				STA		TRACE
+				JMP		BAD_CMD
+
+				.ORG $3FFA
+
+				.WORD	IRQ_VEC
+				.WORD	RST_VEC
+				.WORD	IRQ_VEC
+
+				.END
