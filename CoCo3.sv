@@ -169,8 +169,9 @@ assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 assign USER_OUT = '1;
 assign {DDRAM_CLK, DDRAM_BURSTCNT, DDRAM_ADDR, DDRAM_DIN, DDRAM_BE, DDRAM_RD, DDRAM_WE} = 0;
 assign ADC_BUS  = 'Z;
-//assign {SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 6'b111111;
-//assign SDRAM_DQ = 'Z;
+assign {SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 6'b111111;
+assign SDRAM_DQ = 'Z;
+assign BUTTONS = 0;
 
 
 assign VGA_F1    = 0;
@@ -179,6 +180,8 @@ assign LED_USER  = ioctl_download;
 assign LED_DISK  = 0;
 assign LED_POWER = 0;
 
+assign VGA_SCALER = 0;
+assign HDMI_FREEZE = 0;
 
 wire [1:0] ar = status[9:8];
 
@@ -341,6 +344,7 @@ video_mixer #(.GAMMA(1)) video_mixer
 //assign AUDIO_L = {2'b0,/*6*/cocosound, 8'd0};
 //assign AUDIO_R = AUDIO_L;
 assign AUDIO_S = 0;
+assign AUDIO_MIX = 0;
 
 wire [7:0] r;
 wire [7:0] g;
