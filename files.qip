@@ -24,10 +24,7 @@ set_global_assignment -name VERILOG_FILE CoCO3FPGA_Common/UART_6850/6850RX.v
 set_global_assignment -name VERILOG_FILE CoCO3FPGA_Common/UART_6551/uart_6551.v
 set_global_assignment -name VERILOG_FILE CoCO3FPGA_Common/UART_6551/6551tx.v
 set_global_assignment -name VERILOG_FILE CoCO3FPGA_Common/UART_6551/6551rx.v
-set_global_assignment -name VERILOG_FILE CoCO3FPGA_Common/SPI/SDCard.v
 set_global_assignment -name VHDL_FILE CoCO3FPGA_Common/CPU09/cpu09l_128a.vhd
-set_global_assignment -name VHDL_FILE CoCO3FPGA_Common/SDRAM_CONTROLLER/sdramcntl.vhd
-set_global_assignment -name VHDL_FILE CoCO3FPGA_Common/SDRAM_CONTROLLER/common.vhd
 set_global_assignment -name SDC_FILE coco3fpga_dw.sdc
 set_global_assignment -name VERILOG_FILE coco3fpga_dw.v
 set_global_assignment -name QIP_FILE CoCO3FPGA_Common/UART_CLK.qip
