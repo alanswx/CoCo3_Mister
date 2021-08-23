@@ -166,7 +166,7 @@ assign VGA_SL=0;
 
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
 assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
-assign USER_OUT = '1;
+//assign USER_OUT = '1;
 assign {DDRAM_CLK, DDRAM_BURSTCNT, DDRAM_ADDR, DDRAM_DIN, DDRAM_BE, DDRAM_RD, DDRAM_WE} = 0;
 assign ADC_BUS  = 'Z;
 assign {SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 6'b111111;
@@ -175,7 +175,7 @@ assign BUTTONS = 0;
 
 
 assign VGA_F1    = 0;
-assign USER_OUT  = '1;
+//assign USER_OUT  = '1;
 assign LED_USER  = ioctl_download;
 assign LED_DISK  = 0;
 assign LED_POWER = 0;
@@ -194,7 +194,9 @@ assign VIDEO_ARY = (!ar) ? 12'd3 : 12'd0;
 localparam  CONF_STR = {
         "COCO3;;",
 		  "-;",
-		  "F1,CCCROM,Load Cartridge;",
+		  "F0,BIN,Load COCO ROMs (CB / ECB / DCB / Orch90);",
+		  "-;",
+		  "F1,CCC,Load Cartridge;",
 		  "-;",
 		  "O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "H0O2,Orientation,Vert,Horz;",
@@ -351,6 +353,10 @@ wire [7:0] g;
 wire [7:0] b;
 
 wire easter_egg = ~status[10];
+wire	[31:0]	probe;
+
+assign USER_OUT[6:0] = probe[30:24];
+
 coco3fpga_dw coco3 (
 .CLK50MHZ(CLK_50M),
 .COCO_RESET_N(~reset),
@@ -384,11 +390,13 @@ coco3fpga_dw coco3 (
 .SOUND_OUT(cocosound),
 .SOUND_LEFT(AUDIO_L),
 .SOUND_RIGHT(AUDIO_R),
-  .ioctl_addr(ioctl_addr+'hA000),
+//	Removed offset addition
+  .ioctl_addr(ioctl_addr),
   .ioctl_data(ioctl_data),
   .ioctl_download(ioctl_download),
   .ioctl_index(ioctl_index),
-  .ioctl_wr(ioctl_wr)
+  .ioctl_wr(ioctl_wr),
+.PROBE(probe[31:0])
 
 );
 
