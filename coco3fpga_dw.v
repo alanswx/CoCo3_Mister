@@ -3848,7 +3848,39 @@ end
 // The code for the internal and Orchestra sound
 `include "..\CoCo3FPGA_Common\sound.v"
 // The code for the paddles
-`include "..\CoCo3FPGA_Common\paddles.v"
+//`include "..\CoCo3FPGA_Common\paddles.v"
+
+/*
+  Joystick direction code
+  buttons are handled below in the keyboard routines 
+*/
+
+always @(posedge CLK50MHZ) begin
+  case (SEL)
+  2'b00:
+		if (joya2[15:10] > DTOA_CODE)
+			JSTICK<=1;
+		else
+			JSTICK<=0;
+  2'b01:
+  		if (joya2[7:2] > DTOA_CODE)
+			JSTICK<=1;
+		else
+			JSTICK<=0;
+2'b10:
+		if (joya1[15:10] > DTOA_CODE)
+			JSTICK<=1;
+		else
+			JSTICK<=0;
+  2'b11:
+  		if (joya1[7:2] > DTOA_CODE)
+			JSTICK<=1;
+		else
+			JSTICK<=0;
+	endcase
+end
+
+
 
 /*****************************************************************************
 * Convert PS/2 keyboard to CoCo keyboard
