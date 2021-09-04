@@ -382,9 +382,8 @@ end
 
 assign SPI_HALT = 1'b0;
 
-assign HALT =	  
-//IMM_HALT_09												// Immediate halt
-					WRFIFO_WRFULL											// Test for FIFO FULL error
+assign HALT =	  IMM_HALT_09												// Immediate halt
+					| WRFIFO_WRFULL											// Test for FIFO FULL error
 //					| WF_WRFIFO_WRFULL										// Test for WF FIFO FULL error [pre-exist comment out]
 					| HALT_STATE[6]											// Halt if A HALT command code is issued
 					| (HALT_100_09 & BUFF_ADD[8]) 						// Halt after reading / writing buffer
