@@ -142,11 +142,15 @@ input 	[15:0]		ioctl_index,
 inout	[7:0]		GPIO,
 
 input				EE_N,
-output	[31:0]		PROBE
+output	[31:0]		PROBE,
 
-
+output clk_Q_out,
+output cas_relay,
+input casdout 
 );
 
+assign clk_Q_out = PH_2;
+assign cas_relay = CAS_MTR;
 
 //Analog Board
 parameter BOARD_TYPE = 8'h00;
@@ -1276,7 +1280,7 @@ assign	DATA_REG2	= !DDR2	?	DD_REG2:
 											KEY_COLUMN;
 
 assign	DATA_REG3	= !DDR3	?	DD_REG3:
-											{DTOA_CODE, 1'b1, 1'b1};
+											{DTOA_CODE, 1'b1, casdout};
 
 // A 0 in the DDR makes that pin an input
 assign	BIT3 			= !DD_REG4[3]	?	1'b0:
