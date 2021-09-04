@@ -1729,7 +1729,7 @@ cpu09 GLBCPU09(
 );
 
 // Disk Drive Controller / Slave processor
-`include "..\CoCo3FPGA_Common\CoCo3IO.v"
+`include "CoCo3FPGA_Common\CoCo3IO.v"
 
 //***********************************************************************
 // Interrupt Sources
@@ -3846,7 +3846,7 @@ begin
 end
 
 // The code for the internal and Orchestra sound
-`include "..\CoCo3FPGA_Common\sound.v"
+`include "CoCo3FPGA_Common\sound.v"
 // The code for the paddles
 //`include "..\CoCo3FPGA_Common\paddles.v"
 
