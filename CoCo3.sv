@@ -161,7 +161,7 @@ module emu
 
 
 //`define SOUND_DBG
-assign VGA_SL=0;
+assign VGA_SL=0; 
 //assign CE_PIXEL=1;
 
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
@@ -355,7 +355,7 @@ wire [7:0] b;
 wire easter_egg = ~status[10];
 wire	[31:0]	probe;
 
-assign USER_OUT[6:0] = probe[30:24];
+assign USER_OUT[4:0] = probe[28:24];
 
 coco3fpga_dw coco3 (
 .CLK50MHZ(CLK_50M),
@@ -390,6 +390,9 @@ coco3fpga_dw coco3 (
 .SOUND_OUT(cocosound),
 .SOUND_LEFT(AUDIO_L),
 .SOUND_RIGHT(AUDIO_R),
+.OPTTXD(USER_OUT[5]),
+.OPTRXD(USER_IN[6]),
+
 //	Removed offset addition
   .ioctl_addr(ioctl_addr),
   .ioctl_data(ioctl_data),
@@ -410,7 +413,8 @@ wire cartint=status[16];
 wire sg4v6 = status[15];
 
 
-wire [9:0] switch = { 4'b0000,sg4v6,cartint,video,mpi,cpu_speed} ;
+//	Set bit 9 to swap serial ports...
+wire [9:0] switch = { 4'b1000,sg4v6,cartint,video,mpi,cpu_speed} ;
 
 
 wire reset = RESET | status[0] | buttons[1];

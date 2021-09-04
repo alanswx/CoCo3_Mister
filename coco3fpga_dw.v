@@ -710,7 +710,7 @@ wire	[7:0]	CART_DATA;
 assign PROBE[7:0] = {1'b0, CART1_POL, CART1_FIRQ_N, CART1_FIRQ_BUF[0], CART1_CLK_N_D, CART1_FIRQ_RESET_N, CART1_CLK_N, PH_2};
 assign PROBE[15:8] = LEDR[7:0];
 assign PROBE[23:16] = LEDG[7:0];
-assign PROBE[31:24] = {1'b0, ioctl_data[1:0], ioctl_addr[3:0], ((ioctl_index[5:0] == 6'd1) & ioctl_wr)};
+assign PROBE[31:24] = {3'b000, WF_WRFIFO_RDREQ, WF_RDFIFO_RDREQ, WRFIFO_RDREQ, RDFIFO_RDREQ, IMM_HALT_09};
 
 // SRH MISTer
 //
@@ -876,7 +876,7 @@ assign RAM_CS =					(ROM_SEL)										?	1'b0:		// Any slot
 //		Slot 4	Disk Controller ROM
 assign	ROM_SEL =		( RAM								== 1'b1)	?	1'b0:	// All RAM Mode excluded
 						( ROM 								== 2'b10)	?	1'b0:	// All Internal excluded
-						({ROM[1], ADDRESS[15:14]}			== 3'b010)	?	1'b0: // 16K 8000-BFFF excluded
+						({ROM[1], ADDRESS[15:14]}			== 3'b010)	?	1'b0:   // 16K 8000-BFFF excluded
 						(			 ADDRESS[15]			== 1'b0)	?	1'b0:	// Lower 32K RAM space excluded
 						(			 ADDRESS[15:8]			== 8'hFE)	?	1'b0:	// Vector space excluded
 						(			 ADDRESS[15:8]			== 8'hFF)	?	1'b0:	// Hardware space excluded
@@ -890,10 +890,14 @@ assign	ROM_SEL =		( RAM								== 1'b1)	?	1'b0:	// All RAM Mode excluded
 
 // SRH
 // For DE2-115 concanenate 1'b0 as MSB
-assign	FLASH_ADDRESS =	ENA_DSK				?	{1'b0,9'b000000100, ADDRESS[12:0]}:	//8K Disk BASIC 8K Slot 4
-						ENA_DISK2			?	{1'b0,7'b1111111,   ADDRESS[14:0]}:	//ROM Anternative Disk Controller
-						ENA_ORCC			?	{1'b0,9'b000000101, ADDRESS[12:0]}:	//8K Orchestra 8K 90CC Slot 1
-						ENA_PAK				?	{1'b0,7'b0000000, 	ADDRESS[14:0]}:	//Internal R/W CART ROM
+// The two ENA_PAK terms do not function correctly.  They both occur at once meaning the first has priority...  This needs addressed. SRH 8/25
+
+assign	FLASH_ADDRESS =	ENA_DSK		?			{1'b0,9'b000000100, ADDRESS[12:0]}:	//8K Disk BASIC 8K Slot 4
+						ENA_DISK2	?			{1'b0,7'b1111111,   ADDRESS[14:0]}:	//ROM Anternative Disk Controller
+						ENA_ORCC	?			{1'b0,9'b000000101, ADDRESS[12:0]}:	//8K Orchestra 8K 90CC Slot 1
+//						ENA_PAK		?			{1'b0,7'b0000000, 	ADDRESS[14:0]}:	//Internal R/W CART ROM
+//	(ENA_PAK & (ROM == 2'b11))		?			{1'b0,6'b000000, ~ADDRESS[14],	ADDRESS[13:0]}:	//Internal R/W CART ROM
+						ENA_PAK		?			{1'b0,5'b00000,ROM_BANK,	ADDRESS[13:0]}:	//Internal R/W CART ROM
 // Slot 3 ROMPak
 //({ENA_PAK,BANK_SIZE,ROM_BANK}== 6'b100000)	?	{1'b0,BANK0,     ADDRESS[14:0]}:	//32K
 //({ENA_PAK,BANK_SIZE,ROM_BANK}== 6'b110000)	?	{1'b0,BANK0,     ADDRESS[14:0]}:	//32K
@@ -934,18 +938,18 @@ assign	FLASH_ADDRESS =	ENA_DSK				?	{1'b0,9'b000000100, ADDRESS[12:0]}:	//8K Dis
 //01		16 Internal + 16 External
 //10		32 Internal
 //11		32 External
-assign FLASH_CE_S =	({RAM, ROM[1], ADDRESS[15:14]} ==  4'b0010)				?	1'b1:		// Internal 16K ROM 8000-BFFF
-							({RAM, ROM,    ADDRESS[15:14]} ==  5'b01010)				?	1'b1:		// Internal 32K ROM 8000-BFFF
+assign FLASH_CE_S =	({RAM, ROM[1], ADDRESS[15:14]} ==  4'b0010)						?	1'b1:		// Internal 16K ROM 8000-BFFF
+							({RAM, ROM,    ADDRESS[15:14]} ==  5'b01010)			?	1'b1:		// Internal 32K ROM 8000-BFFF
 							({RAM, ROM,    ADDRESS[15:13]} ==  6'b010110)			?	1'b1:		// Internal 32K ROM C000-DFFF
 							({RAM, ROM,    ADDRESS[15:12]} ==  7'b0101110)			?	1'b1:		// Internal 32K ROM E000-EFFF
 							({RAM, ROM,    ADDRESS[15:11]} ==  8'b01011110)			?	1'b1:		// Internal 32K ROM F000-F7FF
 							({RAM, ROM,    ADDRESS[15:10]} ==  9'b010111110)		?	1'b1:		// Internal 32K ROM F800-FBFF
 							({RAM, ROM,    ADDRESS[15:9]}  == 10'b0101111110)		?	1'b1:		// Internal 32K ROM FC00-FDFF
-							ENA_DSK																?	1'b1:
-							ENA_PAK																?	1'b1:
-							ENA_DISK2															?	1'b1:
-							ENA_ORCC																?	1'b1:
-																										1'b0;
+							ENA_DSK													?	1'b1:
+							ENA_PAK													?	1'b1:
+							ENA_DISK2												?	1'b1:
+							ENA_ORCC												?	1'b1:
+																						1'b0;
 
 
 
@@ -963,11 +967,20 @@ COCO_ROM CC3_ROM(
 assign FLASH_DATA =	ENA_PAK	?	CART_DATA:
 								ROM_DATA;
 
-COCO_ROM_CART CC3_ROM_CART(
-.ADDR({~FLASH_ADDRESS[14], FLASH_ADDRESS[13:0]}),
+//COCO_ROM_CART CC3_ROM_CART(
+//.ADDR({~FLASH_ADDRESS[14], FLASH_ADDRESS[13:0]}),
+//.DATA(CART_DATA),
+//.CLK(~CLK50MHZ),
+//.WR_ADDR(ioctl_addr[14:0]),
+//.WR_DATA(ioctl_data[7:0]),
+//.WRITE((ioctl_index[5:0] == 6'd1) & ioctl_wr)
+//);
+
+COCO_ROM CC3_ROM_CART(
+.ADDR(FLASH_ADDRESS[15:0]),
 .DATA(CART_DATA),
 .CLK(~CLK50MHZ),
-.WR_ADDR(ioctl_addr[14:0]),
+.WR_ADDR(ioctl_addr[15:0]),
 .WR_DATA(ioctl_data[7:0]),
 .WRITE((ioctl_index[5:0] == 6'd1) & ioctl_wr)
 );
@@ -1721,7 +1734,8 @@ cpu09 GLBCPU09(
 	.rw(RW_N),
 	.data_in(DATA_IN),
 	.data_out(DATA_OUT),
-	.halt(1'b0/*HALT_BUF2*/),
+	.halt(HALT_BUF2),
+//	.halt(1'b0/*HALT_BUF2*/),
 	.hold(1'b0),
 	.irq(!CPU_IRQ_N),
 	.firq(!CPU_FIRQ_N),

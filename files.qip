@@ -27,9 +27,8 @@ set_global_assignment -name VERILOG_FILE CoCO3FPGA_Common/UART_6551/6551rx.v
 set_global_assignment -name VHDL_FILE CoCO3FPGA_Common/CPU09/cpu09l_128a.vhd
 set_global_assignment -name SDC_FILE coco3fpga_dw.sdc
 set_global_assignment -name VERILOG_FILE coco3fpga_dw.v
-set_global_assignment -name QIP_FILE CoCO3FPGA_Common/UART_CLK.qip
 set_global_assignment -name QIP_FILE CoCO3FPGA_Common/disk02.qip
 set_global_assignment -name QIP_FILE CoCo3FPGA_Common/disk02_02.qip
 set_global_assignment -name QIP_FILE CoCO3FPGA_Common/PH2_CLK.qip
-set_global_assignment -name MIF_FILE CoCO3FPGA_Common/disk02_02.mif
+set_global_assignment -name MIF_FILE CoCO3FPGA_Common/disk02_02_No_Audio.mif
 set_global_assignment -name SYSTEMVERILOG_FILE CoCo3.sv
