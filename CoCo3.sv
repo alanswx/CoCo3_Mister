@@ -198,7 +198,7 @@ localparam  CONF_STR = {
 		  "F1,CCC,Load Cartridge;",
 		  "F2,CAS,Load Cassette;",
 		  "TF,Stop & Rewind;",
-        "OD,Monitor Tape Sound,No,Yes;",
+        "OH,Monitor Tape Sound,No,Yes;",
 		  "-;",
 		  "O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "H0O2,Orientation,Vert,Horz;",
@@ -346,7 +346,7 @@ video_mixer #(.GAMMA(1)) video_mixer
 //
 //
 wire [15:0] audio_left;
-assign AUDIO_L = { audio_left[15:6], audio_left[5] ^ (status[13] ?  casdout : 1'b0),audio_left[4:0]};
+assign AUDIO_L = { audio_left[15:6], audio_left[5] ^ (status[17] ?  casdout : 1'b0),audio_left[4:0]};
 //assign AUDIO_R = AUDIO_L;
 assign AUDIO_S = 0;
 assign AUDIO_MIX = 0;
