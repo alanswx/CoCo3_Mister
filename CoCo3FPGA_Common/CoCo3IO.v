@@ -592,7 +592,8 @@ glb6850 COM2(
 * Track (Upper 8 bits of track address)
 *
 ******************************************************************************/
-always @(negedge PH_2 or negedge RESET_N)
+
+always @(negedge CLK50MHZ or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -619,75 +620,80 @@ begin
 	else
 	begin
 // Double buffer BUSY to reset IRQ out
-		BUSY0 <= IRQ_RESET;
-		BUSY1 <= BUSY0;
-		CMD_RST_BUF0 <= CMD_RST;
-		CMD_RST_BUF1 <= CMD_RST_BUF0;
-		case ({RW_N, HDD_EN, ADDRESS[3:0]})
-		6'b010000:
+		if (PH_2)
 		begin
-			DRIVE_SEL_EXT <= {4'b0000,
+			BUSY0 <= IRQ_RESET;
+			BUSY1 <= BUSY0;
+			CMD_RST_BUF0 <= CMD_RST;
+			CMD_RST_BUF1 <= CMD_RST_BUF0;
+			case ({RW_N, HDD_EN, ADDRESS[3:0]})
+			6'b010000:
+			begin
+				DRIVE_SEL_EXT <= 	{4'b0000,
 									DATA_OUT[6],		// Drive Select [3] / Side Select
 									DATA_OUT[2:0]};	// Drive Select [2:0]
-			MOTOR <= DATA_OUT[3];					// Turn on motor, not used here just checked, 0=MotorOff 1=MotorOn
-			WRT_PREC <= DATA_OUT[4];				// Write Precompensation, not used here
-			DENSITY <= DATA_OUT[5];					// Density, not used here just checked
-			HALT_EN <= DATA_OUT[7];					// Normal Halt enable, 0=Disabled 1=Enabled
-		end
-		6'b010001:
-		begin
-			IRQ_09_BUF2 <= 1'b0;
-			BI_IRQ_EN <= DATA_OUT[0];
-		end
-		6'b010100:										// Extended Drive Select
-		begin
-			DRIVE_SEL_EXT <= DATA_OUT;				// Extended Drive Select
-		end
-		6'b011000:
-		begin
-			COMMAND <= DATA_OUT;						// Command
-			IRQ_02_N <= BUSY1;							// Signal 6502 unless it is busy
-		end
-		6'b011001:
-		begin
-			TRACK_REG_W <= DATA_OUT;				// Lower 8 bits of track
-			TRACK_EXT_W <= 8'h00;
-		end
-		6'b011010:
-			SECTOR <= DATA_OUT;					// 0-17 (0-255 Capable)
-		6'b011011:
-		begin
-			DATA_REG <= DATA_OUT;					// Data
-			DATA_EXT <= 8'h00;						// Clear extended Data on DATA write
-		end
-		6'b011101:
-			TRACK_EXT_W <= DATA_OUT;				// Extended Track
-		6'b011111:
-			DATA_EXT <= DATA_OUT;					// Extended Data
-		default:
-		begin
-			IRQ_09_BUF0 <= IRQ_09_EN;
-			IRQ_09_BUF1 <= IRQ_09_BUF0;
-			if(IRQ_09_BUF1)							// Set but not clear
-			begin
-				IRQ_09_BUF2 <= 1'b1;
+				MOTOR <= DATA_OUT[3];					// Turn on motor, not used here just checked, 0=MotorOff 1=MotorOn
+				WRT_PREC <= DATA_OUT[4];				// Write Precompensation, not used here
+				DENSITY <= DATA_OUT[5];					// Density, not used here just checked
+				HALT_EN <= DATA_OUT[7];					// Normal Halt enable, 0=Disabled 1=Enabled
 			end
-			if(CMD_RST_BUF1)
+			6'b010001:
 			begin
-				COMMAND <= 8'h00;
+				IRQ_09_BUF2 <= 1'b0;
+				BI_IRQ_EN <= DATA_OUT[0];
 			end
-			if(FORCE_NMI_09_BUF1)							// If IRQ (end of command) clear Halt enables
+			6'b010100:										// Extended Drive Select
 			begin
-				HALT_EN <= 1'b0;
+				DRIVE_SEL_EXT <= DATA_OUT;				// Extended Drive Select
 			end
-			if(BUSY1)									// If BUSY is set then IRQ must have worked
+			6'b011000:
 			begin
-				IRQ_02_N <= 1'b1;
+				COMMAND <= DATA_OUT;						// Command
+				IRQ_02_N <= BUSY1;							// Signal 6502 unless it is busy
 			end
+			6'b011001:
+			begin
+				TRACK_REG_W <= DATA_OUT;				// Lower 8 bits of track
+				TRACK_EXT_W <= 8'h00;
+			end
+			6'b011010:
+				SECTOR <= DATA_OUT;					// 0-17 (0-255 Capable)
+			6'b011011:
+			begin
+				DATA_REG <= DATA_OUT;					// Data
+				DATA_EXT <= 8'h00;						// Clear extended Data on DATA write
+			end
+			6'b011101:
+				TRACK_EXT_W <= DATA_OUT;				// Extended Track
+			6'b011111:
+				DATA_EXT <= DATA_OUT;					// Extended Data
+			default:
+			begin
+				IRQ_09_BUF0 <= IRQ_09_EN;
+				IRQ_09_BUF1 <= IRQ_09_BUF0;
+				if(IRQ_09_BUF1)							// Set but not clear
+				begin
+					IRQ_09_BUF2 <= 1'b1;
+				end
+				if(CMD_RST_BUF1)
+				begin
+					COMMAND <= 8'h00;
+				end
+				if(FORCE_NMI_09_BUF1)							// If IRQ (end of command) clear Halt enables
+				begin
+					HALT_EN <= 1'b0;
+				end
+				if(BUSY1)									// If BUSY is set then IRQ must have worked
+				begin
+					IRQ_02_N <= 1'b1;
+				end
+			end
+			endcase
 		end
-		endcase
 	end
 end
+
+
 assign BI_TO_RST = !RDFIFO_RDEMPTY | ({RW_N,HDD_EN, ADDRESS[3:0]} == 6'h11);
 always @ (negedge V_SYNC or posedge BI_TO_RST)
 begin
