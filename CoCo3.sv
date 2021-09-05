@@ -169,8 +169,7 @@ assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 //assign USER_OUT = '1;
 assign {DDRAM_CLK, DDRAM_BURSTCNT, DDRAM_ADDR, DDRAM_DIN, DDRAM_BE, DDRAM_RD, DDRAM_WE} = 0;
 assign ADC_BUS  = 'Z;
-assign {SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 6'b111111;
-assign SDRAM_DQ = 'Z;
+assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
 assign BUTTONS = 0;
 
 
@@ -197,6 +196,9 @@ localparam  CONF_STR = {
 		  "F0,BIN,Load COCO ROMs (CB / ECB / DCB / Orch90);",
 		  "-;",
 		  "F1,CCC,Load Cartridge;",
+		  "F2,CAS,Load Cassette;",
+		  "TF,Stop & Rewind;",
+        "OH,Monitor Tape Sound,No,Yes;",
 		  "-;",
 		  "O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "H0O2,Orientation,Vert,Horz;",
@@ -343,7 +345,8 @@ video_mixer #(.GAMMA(1)) video_mixer
 );
 //
 //
-//assign AUDIO_L = {2'b0,/*6*/cocosound, 8'd0};
+wire [15:0] audio_left;
+assign AUDIO_L = { audio_left[15:6], audio_left[5] ^ (status[17] ?  casdout : 1'b0),audio_left[4:0]};
 //assign AUDIO_R = AUDIO_L;
 assign AUDIO_S = 0;
 assign AUDIO_MIX = 0;
@@ -388,7 +391,7 @@ coco3fpga_dw coco3 (
 .P_SWITCH(~{coco_joy2[4],coco_joy1[5],coco_joy2[5],coco_joy1[4]}),
 .SWITCH(switch),
 .SOUND_OUT(cocosound),
-.SOUND_LEFT(AUDIO_L),
+.SOUND_LEFT(audio_left),
 .SOUND_RIGHT(AUDIO_R),
 .OPTTXD(USER_OUT[5]),
 .OPTRXD(USER_IN[6]),
@@ -399,7 +402,11 @@ coco3fpga_dw coco3 (
   .ioctl_download(ioctl_download),
   .ioctl_index(ioctl_index),
   .ioctl_wr(ioctl_wr),
-.PROBE(probe[31:0])
+.PROBE(probe[31:0]),
+  .clk_Q_out(clk_Q_out),
+  .casdout( casdout),
+  .cas_relay(cas_relay)
+
 
 );
 
@@ -420,5 +427,42 @@ wire [9:0] switch = { 4'b1000,sg4v6,cartint,video,mpi,cpu_speed} ;
 wire reset = RESET | status[0] | buttons[1];
 //wire reset = buttons[1];
 
+wire clk_Q_out;
 
+wire [24:0] sdram_addr;
+wire [7:0] sdram_data;
+wire sdram_rd;
+wire load_tape = ioctl_index == 2;
+
+sdram sdram
+(
+	.*,
+	.init(~pll_locked),
+	.clk(CLK_50M/*clk_sys*/),
+	.addr(ioctl_download ? ioctl_addr : sdram_addr),
+	.wtbt(0),
+	.dout(sdram_data),
+	.din(ioctl_data),
+	.rd(sdram_rd),
+	.we(ioctl_wr & load_tape),
+	.ready()
+);
+
+wire casdout;
+wire cas_relay;
+
+cassette cassette(
+  .clk(CLK_50M/*clk_sys*/),
+  .Q(clk_Q_out),
+
+  .rewind(status[15]),
+  .en(cas_relay),
+
+  .sdram_addr(sdram_addr),
+  .sdram_data(sdram_data),
+  .sdram_rd(sdram_rd),
+
+  .data(casdout)
+//   .status(tape_status)
+);
 endmodule
