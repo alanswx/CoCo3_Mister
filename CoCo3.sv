@@ -176,7 +176,7 @@ assign BUTTONS = 0;
 assign VGA_F1    = 0;
 //assign USER_OUT  = '1;
 assign LED_USER  = ioctl_download;
-assign LED_DISK  = 0;
+assign LED_DISK  = ready;
 assign LED_POWER = 0;
 
 assign VGA_SCALER = 0;
@@ -405,9 +405,72 @@ coco3fpga_dw coco3 (
 .PROBE(probe[31:0]),
   .clk_Q_out(clk_Q_out),
   .casdout( casdout),
-  .cas_relay(cas_relay)
+  .cas_relay(cas_relay),
 
+  .RAM0_ADDRESS(RAM0_ADDRESS),
+  .RAM0_RW_N(RAM0_RW_N),
+  .RAM0_DATA_O(RAM0_DATA_O),
+  .RAM0_DATA_I(RAM0_DATA_I),
+  .RAM0_BE0_N(RAM0_BE0_N),
+  .RAM0_BE1_N(RAM0_BE1_N)
+);
 
+wire 	[19:0]	RAM0_ADDRESS;
+wire				RAM0_RW_N;
+wire		[15:0]	RAM0_DATA_O;
+wire		[15:0]	RAM0_DATA_I;
+wire				RAM0_BE0_N;
+wire				RAM0_BE1_N;
+
+/*
+COCO_SRAM CC3_SRAM0(
+.CLK(~CLK_50M),
+.ADDR(RAM0_ADDRESS[15:0]),
+.R_W(RAM0_RW_N | RAM0_BE0_N),
+.DATA_I(RAM0_DATA_I[7:0]),
+.DATA_O(RAM0_DATA_O[7:0])
+);
+
+COCO_SRAM CC3_SRAM1(
+.CLK(~CLK_50M),
+.ADDR(RAM0_ADDRESS[15:0]),
+.R_W(RAM0_RW_N | RAM0_BE1_N),
+.DATA_I(RAM0_DATA_I[15:8]),
+.DATA_O(RAM0_DATA_O[15:8])
+);
+*/
+/*
+
+wire [15:0] data_in = {RAM0_DATA_I[7:0], RAM0_DATA_I[7:0]};
+sdram sdram
+(
+	.*,
+	.init(~pll_locked),
+	.clk(~clk_ram),
+	.addr({5'b0,RAM0_ADDRESS[19:0]}),
+	.wtbt(2'b00),
+	.dout(RAM0_DATA_O),
+	.din(data_in),
+	.rd(RAM0_RW_N),
+	.we(~RAM0_RW_N),
+	.ready()
+);
+*/
+
+wire ready;
+
+sdram sdram
+(
+    .*,
+    .init(~pll_locked),
+    .clk(clk_ram),
+    .addr({5'b0,RAM0_ADDRESS[19:0]}),
+    .wtbt({~RAM0_BE1_N, ~RAM0_BE0_N}),
+    .dout(RAM0_DATA_O),
+    .din(RAM0_DATA_I),
+    .rd(RAM0_RW_N & (~RAM0_BE1_N | ~RAM0_BE0_N)),
+    .we(~RAM0_RW_N & (~RAM0_BE1_N | ~RAM0_BE0_N)),
+    .ready(ready)
 );
 
 wire [5:0] cocosound;
@@ -434,11 +497,12 @@ wire [7:0] sdram_data;
 wire sdram_rd;
 wire load_tape = ioctl_index == 2;
 
+/*
 sdram sdram
 (
 	.*,
 	.init(~pll_locked),
-	.clk(CLK_50M/*clk_sys*/),
+	.clk(CLK_50M),
 	.addr(ioctl_download ? ioctl_addr : sdram_addr),
 	.wtbt(0),
 	.dout(sdram_data),
@@ -447,6 +511,7 @@ sdram sdram
 	.we(ioctl_wr & load_tape),
 	.ready()
 );
+*/
 
 wire casdout;
 wire cas_relay;

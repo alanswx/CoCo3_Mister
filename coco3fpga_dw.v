@@ -146,7 +146,16 @@ output	[31:0]		PROBE,
 
 output clk_Q_out,
 output cas_relay,
-input casdout 
+input casdout,
+
+output 	reg [19:0]	RAM0_ADDRESS,
+output	reg			RAM0_RW_N,		// OUT
+input		[15:0]	RAM0_DATA_O,
+output	reg 	[15:0]	RAM0_DATA_I,
+output	reg			RAM0_BE0_N,	// OUT
+output	reg			RAM0_BE1_N	// OUT
+
+
 );
 
 assign clk_Q_out = PH_2;
@@ -172,26 +181,26 @@ parameter Version_Hi = 8'h40;
 
 //	SRH	MISTer
 // Use 128KB Internal SRAM
-reg 	[19:0]	RAM0_ADDRESS;		// OUT 2MB SRAM.  Bit 19 unconnected on DE1, gives 1MB
-//reg	 [19:0]	RAM0_ADDRESS;
-reg				RAM0_RW_N;		// OUT
-//reg				RAM0_RW_N;
 
-// SRAM	paths to be delt with later in code  - convert to RAM0_DATA_I and RAM0_DATA_O
-//inout		[15:0]	RAM0_DATA;	//OUT
-//reg		[15:0]	RAM0_DATA;
+/*
+output 	[19:0]	RAM0_ADDRESS,
+output				RAM0_RW_N,		// OUT
+input		[15:0]	RAM0_DATA_O,
+output		[15:0]	RAM0_DATA_I,
+output				RAM0_BE0_N	// OUT
+*/
 
-reg		[15:0]	RAM0_DATA_O;
-//reg			[15:0]	RAM0_DATA_O;
+//reg 	[19:0]	RAM0_ADDRESS;		// OUT 2MB SRAM.  Bit 19 unconnected on DE1, gives 1MB
+//reg				RAM0_RW_N;		// OUT
 
-reg		[15:0]	RAM0_DATA_I;
+
+//reg		[15:0]	RAM0_DATA_O;
+//reg		[15:0]	RAM0_DATA_I;
 
 wire			RAM0_CS_N;	// OUT defined later as static '0'
 wire			RAM_CS;						// DATA_IN Mux select
-reg				RAM0_BE0_N;	// OUT
-//reg					RAM0_BE0_N;
-reg				RAM0_BE1_N;	// OUT
-//reg					RAM0_BE1_N;
+//reg				RAM0_BE0_N;	// OUT
+//reg				RAM0_BE1_N;	// OUT
 wire			RAM0_OE_N;	// OUT	defined later as static '0'
 
 wire			RAM0_BE0;
@@ -989,7 +998,7 @@ COCO_ROM CC3_ROM_CART(
 .WRITE((ioctl_index[5:0] == 6'd1) & ioctl_wr)
 );
 
-
+/*
 COCO_SRAM CC3_SRAM0(
 .CLK(~CLK50MHZ),
 .ADDR(RAM0_ADDRESS[15:0]),
@@ -1005,7 +1014,7 @@ COCO_SRAM CC3_SRAM1(
 .DATA_I(RAM0_DATA_I[15:8]),
 .DATA_O(RAM0_DATA_O[15:8])
 );
-
+*/
 
 
 assign	ENA_ORCC =	({ROM_SEL, MPI_CTS} == 3'b100)						?	1'b1:		// Orchestra-90CC C000-DFFF Slot 1
