@@ -1747,6 +1747,7 @@ cpu09 GLBCPU09(
 );
 
 // Disk Drive Controller / Slave processor
+// New fdc_v2 goes here  - the include will be removed.
 `include "CoCo3FPGA_Common\CoCo3IO.v"
 
 //***********************************************************************
