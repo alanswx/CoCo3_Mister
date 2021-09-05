@@ -198,6 +198,7 @@ localparam  CONF_STR = {
 		  "F1,CCC,Load Cartridge;",
 		  "F2,CAS,Load Cassette;",
 		  "TF,Stop & Rewind;",
+        "OD,Monitor Tape Sound,No,Yes;",
 		  "-;",
 		  "O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "H0O2,Orientation,Vert,Horz;",
@@ -344,7 +345,8 @@ video_mixer #(.GAMMA(1)) video_mixer
 );
 //
 //
-//assign AUDIO_L = {2'b0,/*6*/cocosound, 8'd0};
+wire [15:0] audio_left;
+assign AUDIO_L = { audio_left[15:6], audio_left[5] ^ (status[13] ?  casdout : 1'b0),audio_left[4:0]};
 //assign AUDIO_R = AUDIO_L;
 assign AUDIO_S = 0;
 assign AUDIO_MIX = 0;
@@ -389,7 +391,7 @@ coco3fpga_dw coco3 (
 .P_SWITCH(~{coco_joy2[4],coco_joy1[5],coco_joy2[5],coco_joy1[4]}),
 .SWITCH(switch),
 .SOUND_OUT(cocosound),
-.SOUND_LEFT(AUDIO_L),
+.SOUND_LEFT(audio_left),
 .SOUND_RIGHT(AUDIO_R),
 .OPTTXD(USER_OUT[5]),
 .OPTRXD(USER_IN[6]),
@@ -436,7 +438,7 @@ sdram sdram
 (
 	.*,
 	.init(~pll_locked),
-	.clk(clk_sys),
+	.clk(CLK_50M/*clk_sys*/),
 	.addr(ioctl_download ? ioctl_addr : sdram_addr),
 	.wtbt(0),
 	.dout(sdram_data),
@@ -450,7 +452,7 @@ wire casdout;
 wire cas_relay;
 
 cassette cassette(
-  .clk(clk_sys),
+  .clk(CLK_50M/*clk_sys*/),
   .Q(clk_Q_out),
 
   .rewind(status[15]),
