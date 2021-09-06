@@ -5,6 +5,8 @@
 //  Copyright (C) 2007,2008 Viacheslav Slavinsky
 //  Copyright (C) 2016 Sorgelig
 //
+//	Modifications for track size of 18 x 256 by Stan Hodge (SRH) 9/6/21
+//
 //  This program is free software; you can redistribute it and/or modify it
 //  under the terms of the GNU General Public License as published by the Free
 //  Software Foundation; either version 2 of the License, or (at your option)
@@ -72,6 +74,7 @@ module wd1793 #(parameter RWMODE=0, EDSK=1)
 // 2:  9 x 512  = 4.5KB
 // 3:  5 x 1024 = 5.0KB
 // 4: 10 x 512  = 5.0KB
+// 5: 18 x 256  = 4.5KB (SRH)
 
 assign dout      = q;
 assign drq       = s_drq;
@@ -126,6 +129,7 @@ always @(posedge clk_sys) begin
 				2: buff_a <= hs + {{dts, 3'b000}  + dts                               + wdreg_sector - 1'd1,  9'd0};
 				3: buff_a <= hs + {{dts, 2'b00}   + dts                               + wdreg_sector - 1'd1, 10'd0};
 				4: buff_a <= hs + {{dts, 3'b000}  +{dts, 1'b0}                        + wdreg_sector - 1'd1,  9'd0};
+				5: buff_a <= hs + {{dts, 4'b0000} +{dts, 1'b0}                        + wdreg_sector - 1'd1,  8'd0}; //(SRH)
 		default: buff_a <= edsk_offset;
 	endcase
 	case({var_size,size_code})
@@ -134,6 +138,7 @@ always @(posedge clk_sys) begin
 				2: sectors_per_track <= 9;
 				3: sectors_per_track <= 5;
 				4: sectors_per_track <= 10;
+				5: sectors_per_track <= 18; //(SRH)
 		default: sectors_per_track <= edsk_spt;
 	endcase
 	case({var_size,size_code})
@@ -142,6 +147,7 @@ always @(posedge clk_sys) begin
 				2: wd_size_code <= 2;
 				3: wd_size_code <= 3;
 				4: wd_size_code <= 2;
+				5: wd_size_code <= 1; //(SRH)
 		default: wd_size_code <= edsk_sizecode;
 	endcase
 end

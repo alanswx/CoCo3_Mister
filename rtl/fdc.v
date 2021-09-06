@@ -9,11 +9,11 @@
 // Code based partily on work by Gary Becker
 // Copyright (c) 2008 Gary Becker (gary_l_becker@yahoo.com)
 //
-// All rights reserved
-
 // Floopy Disk Controller by Stan Hodge (stan.pda@gmail.com)
 // Copyright (c) 2021 by Stan Hodge (stan.pda@gmail.com)
 //
+// All rights reserved
+
 // Redistribution and use in source and synthezised forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
@@ -50,40 +50,166 @@
 
 
 module fdc(
-	input        clk_sys,     // sys clock
-	input        ce,          // ce at CPU clock rate
-	input        reset,	     // async reset
-	input        io_en,
-	input        rd,          // i/o read
-	input        wr,          // i/o write
-	input  [3:0] addr,        // i/o port addr [extended for coco]
-	input  [7:0] din,         // i/o data in
-	output [7:0] dout,        // i/o data out
-	output       drq,         // DMA request
-	output       intrq,
-	output       busy,
+	input        		CLK,     		// clock
+	input        		CLK_EN,        	// ce at CPU clock rate
+	input        		RESET_N,	   	// async reset
+	input        		HDD_EN,
+	input				RW_N,
+	input  		[3:0]	ADDRESS,       	// i/o port addr [extended for coco]
+	input  		[7:0]	DATA_IN,        // data in
+	output 		[7:0] 	DATA_HDD,      	// data out
+	output       		HALT,         	// DMA request
+	output       		NMI_09,
+//	output       		busy,			// unused???
 
-	input        wp,          // write protect
+// 	SD block level interface
 
-	input  [2:0] size_code,
-	input        layout,      // 0 = Track-Side-Sector, 1 - Side-Track-Sector
-	input        side,
-	input        ready,
+	input 		[3:0]	img_mounted, 	// signaling that new image has been mounted
+	input				img_readonly, 	// mounted as read only. valid only for active bit in img_mounted
+	input 		[19:0] 	img_size,    	// size of image in bytes. 1MB MAX!
 
-	// SD access (RWMODE == 1)
-	input        img_mounted, // signaling that new image has been mounted
-	input [19:0] img_size,    // size of image in bytes. 1MB MAX!
-	output       prepare,
-	output[31:0] sd_lba,
-	output reg   sd_rd,
-	output reg   sd_wr,
-	input        sd_ack,
-	input  [8:0] sd_buff_addr,
-	input  [7:0] sd_buff_dout,
-	output [7:0] sd_buff_din,
-	input        sd_buff_wr
+	output		[31:0] 	sd_lba[4],
+	output reg	[3:0]	sd_rd,
+	output reg  [3:0]	sd_wr,
+	input       [3:0]	sd_ack,
+
+// 	SD byte level access. Signals for 2-PORT altsyncram.
+	input  		[7:0]	sd_buff_addr,
+	input  		[7:0] 	sd_buff_dout,
+	output 		[7:0] 	sd_buff_din[4],
+	input        		sd_buff_wr
 );
 
+wire	[7:0]	DRIVE_SEL_EXT;
+wire			MOTOR;
+wire			WRT_PREC;
+wire			DENSITY;
+wire			HALT_EN;
+wire 			INTRQ;
+wire			DRQ;
 
+wire			WR;
+wire			RD;
+wire			CE;
+wire			HALT_EN_RST;
+wire	[7:0]	DATA_1793;
+
+assign	DATA_HDD =		({HDD_EN, ADDRESS[3:0]} == 5'h10)	?	{HALT_EN, 
+																DRIVE_SEL_EXT[3],
+																DENSITY, 
+																WRT_PREC, 
+																MOTOR, 
+																DRIVE_SEL_EXT[2:0]}:
+						(CE == 1'b1)						?	DATA_1793:
+																8'h00;
+
+assign WR = (~RW_N & CE);
+assign RD = (RW_N & CE);
+assign CE = (HDD_EN & ADDRESS[3]);
+
+
+//	NMI from disk controller
+assign	NMI_09	=	DENSITY & INTRQ;				// Send NMI if Double Density (Halt Mode)
+
+//	HALT from disk controller
+assign	HALT	=	HALT_EN & DRQ;
+
+assign HALT_EN_RST = RESET_N & ~INTRQ; // From controller schematic
+
+always @(negedge CLK or negedge RESET_N)
+begin
+	if(!RESET_N)
+	begin
+		DRIVE_SEL_EXT <= 8'h00;
+		MOTOR <= 1'b0;
+		WRT_PREC <= 1'b0;
+		DENSITY <= 1'b0;
+	end
+	else
+	begin
+		if (CLK_EN)
+		begin
+			case ({RW_N, HDD_EN, ADDRESS[3:0]})
+			6'b010000:
+			begin
+				DRIVE_SEL_EXT <= 	{4'b0000,
+									DATA_IN[6],		// Drive Select [3] / Side Select
+									DATA_IN[2:0]};		// Drive Select [2:0]
+				MOTOR <= DATA_IN[3];					// Turn on motor, not used here just checked, 0=MotorOff 1=MotorOn
+				WRT_PREC <= DATA_IN[4];				// Write Precompensation, not used here
+				DENSITY <= DATA_IN[5];					// Density, not used here just checked
+			end
+			endcase
+		end
+	end
+end
+
+always @(negedge CLK or negedge HALT_EN_RST)
+begin
+	if(!HALT_EN_RST)
+	begin
+		HALT_EN <= 1'b0;
+	end
+	else
+	begin
+		if (CLK_EN)
+		begin
+			case ({RW_N, HDD_EN, ADDRESS[3:0]})
+			6'b010000:
+			begin
+				HALT_EN <= DATA_IN[7];					// Normal Halt enable, 0=Disabled 1=Enabled
+			end
+			endcase
+		end
+	end
+end
+
+wire	[2:0]	drive_index;
+
+assign 	drive_index = 	(DRIVE_SEL_EXT[3:0] == 4'b1000)	?	3'd3: 
+						(DRIVE_SEL_EXT[3:0] == 4'b0100)	?	3'd2:
+						(DRIVE_SEL_EXT[3:0] == 4'b0010)	?	3'd1:
+															3'd0;
+
+wd1793 #(1,0) coco_wd1793
+(
+	.clk_sys(CLK),
+	.ce(CLK_EN),
+	.reset(RESET_N),
+	.io_en(CE),
+	.rd(RD),
+	.wr(WR),
+	.addr(ADDRESS[1:0]),
+	.din(DATA_IN),
+	.dout(DATA_1793),
+	.drq(DRQ),
+	.intrq(INTRQ),
+
+	.img_mounted(img_mounted),
+	.img_size(img_size),
+
+	.sd_lba(sd_lba[drive_index]),
+	.sd_rd(sd_rd),
+	.sd_wr(sd_wr), 
+	.sd_ack(sd_ack),
+
+	.sd_buff_addr(sd_buff_addr),
+	.sd_buff_dout(sd_buff_dout),
+	.sd_buff_din(sd_buff_din[drive_index]), 
+	.sd_buff_wr(sd_buff_wr),
+
+	.wp(1'b0),
+
+	.size_code(3'd5),		// 5 is 18 sector x 256 bits COCO standard
+	.layout(1'b1),			// 0 = Track-Side-Sector, 1 - Side-Track-Sector
+	.side(1'b0),			// Not support DS yet.
+	.ready(1'b1),			// ?? [always?]
+
+	.input_active(0),
+	.input_addr(0),
+	.input_data(0),
+	.input_wr(0),
+	.buff_din(0)
+);
 
 endmodule

@@ -138,6 +138,24 @@ input				ioctl_download,
 input				ioctl_wr,
 input 	[15:0]		ioctl_index,
 
+// SD block level interface
+input   [3:0]  		img_mounted, // signaling that new image has been mounted
+input				img_readonly, // mounted as read only. valid only for active bit in img_mounted
+input 	[19:0] 		img_size,    // size of image in bytes. 1MB MAX!
+
+output	[31:0] 		sd_lba[4],
+output  [5:0] 		sd_blk_cnt[4], // number of blocks-1, total size ((sd_blk_cnt+1)*(1<<(BLKSZ+7))) must be <= 16384!
+
+output 	reg  [3:0]	sd_rd,
+output 	reg  [3:0]	sd_wr,
+input        [3:0]	sd_ack,
+
+// SD byte level access. Signals for 2-PORT altsyncram.
+input  	[7:0] 		sd_buff_addr,
+input  	[7:0] 		sd_buff_dout,
+output 	[7:0] 		sd_buff_din[4],
+input        		sd_buff_wr,
+
 //	GPIO
 inout	[7:0]		GPIO,
 
@@ -1006,8 +1024,6 @@ COCO_SRAM CC3_SRAM1(
 .DATA_O(RAM0_DATA_O[15:8])
 );
 
-
-
 assign	ENA_ORCC =	({ROM_SEL, MPI_CTS} == 3'b100)						?	1'b1:		// Orchestra-90CC C000-DFFF Slot 1
 																								1'b0;
 assign	ENA_DISK2 =	({ROM_SEL, MPI_CTS} == 3'b101)						?	1'b1:		// Alternative Disk controller ROM up to 32K
@@ -1748,7 +1764,46 @@ cpu09 GLBCPU09(
 
 // Disk Drive Controller / Slave processor
 // New fdc_v2 goes here  - the include will be removed.
+
+`define NEW_COCO_FDC
+
+`ifdef NEW_COCO_FDC
+
+fdc coco_fdc(
+	.CLK(CLK50MHZ),     				// clock
+	.CLK_EN(PH_2),        				// ce at CPU clock rate
+	.RESET_N(RESET_N),	   				// async reset
+	.HDD_EN(HDD_EN),
+	.RW_N(RW_N),
+	.ADDRESS(ADDRESS[3:0]),	       		// i/o port addr [extended for coco]
+	.DATA_IN(DATA_OUT),        			// data in
+	.DATA_HDD(DATA_HDD),      			// data out
+	.HALT(HALT),         				// DMA request
+	.NMI_09(NMI_09),
+
+// 	SD block level interface
+	.img_mounted(img_mounted), 			// signaling that new image has been mounted
+	.img_readonly(img_readonly), 		// mounted as read only. valid only for active bit in img_mounted
+	.img_size(img_size),    			// size of image in bytes. 1MB MAX!
+
+	.sd_lba(sd_lba),
+	.sd_rd(sd_rd),
+	.sd_wr(sd_wr),
+	.sd_ack(sd_ack),
+
+// 	SD byte level access. Signals for 2-PORT altsyncram.
+	.sd_buff_addr(sd_buff_addr),
+	.sd_buff_dout(sd_buff_dout),
+	.sd_buff_din(sd_buff_din),
+	.sd_buff_wr(sd_buff_wr)
+);
+
+`else
 `include "CoCo3FPGA_Common\CoCo3IO.v"
+
+`endif
+
+
 
 //***********************************************************************
 // Interrupt Sources

@@ -107,7 +107,7 @@ T65 GLB6502(
 *
 * 0000-07FF		RAM/ROM
 * 0800-0FFF		Secondary RAM/ROM and Vectors
-* 1000-EFFF    NA
+* 1000-EFFF     NA
 * F000-F1FF		NA (Buffer?)
 * F400			Day of Week
 * F401			Seconds

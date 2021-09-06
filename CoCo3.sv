@@ -195,6 +195,10 @@ localparam  CONF_STR = {
 		  "-;",
 		  "F0,BIN,Load COCO ROMs (CB / ECB / DCB / Orch90);",
 		  "-;",
+		  "S0,DSK,Load Disk Drive 0;",
+		  "S1,DSK,Load Disk Drive 1;",
+		  "S2,DSK,Load Disk Drive 2;",
+		  "S3,DSK,Load Disk Drive 3;",
 		  "F1,CCC,Load Cartridge;",
 		  "F2,CAS,Load Cassette;",
 		  "TF,Stop & Rewind;",
@@ -262,7 +266,8 @@ wire [21:0] gamma_bus;
 
 assign CLK_VIDEO = clk_sys;
 
-hps_io #(.CONF_STR(CONF_STR),.PS2DIV(1000)) hps_io
+// SD - 4 drives 256K size blocks	
+hps_io #(.CONF_STR(CONF_STR),.PS2DIV(1000), .VDNUM(4), .BLKSZ(1)) hps_io
 (
 //        .clk_sys(clk_sys),
 		  .clk_sys(CLK_50M),
@@ -281,7 +286,27 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(1000)) hps_io
         .ioctl_addr(ioctl_addr),
         .ioctl_dout(ioctl_data),
         .ioctl_index(ioctl_index),
-		  
+// 	SD block level interface
+
+		.img_mounted(img_mounted), 		// signaling that new image has been mounted
+		.img_readonly(img_readonly), 	// mounted as read only. valid only for active bit in img_mounted
+		.img_size(img_size),			// size of image in bytes. 1MB MAX!
+
+		.sd_lba(sd_lba),
+		.sd_blk_cnt(sd_blk_cnt), 		// number of blocks-1, total size ((sd_blk_cnt+1)*(1<<(BLKSZ+7))) must be <= 16384!
+
+		.sd_rd(sd_rd),
+		.sd_wr(sd_wr),
+		.sd_ack(sd_ack),
+
+// 	SD byte level access. Signals for 2-PORT altsyncram.
+		.sd_buff_addr(sd_buff_addr),
+		.sd_buff_dout(sd_buff_dout),
+		.sd_buff_din(sd_buff_din),
+		.sd_buff_wr(sd_buff_wr),
+
+
+	  
 		  .joystick_0(joy1),
 		  .joystick_1(joy2),
 
@@ -295,6 +320,23 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(1000)) hps_io
         .ps2_kbd_data_out   ( ps2_kbd_data   )
 );
 
+// SD block level interface
+wire	[3:0]  		img_mounted;
+wire				img_readonly;
+wire	[19:0] 		img_size;
+
+wire	[31:0] 		sd_lba[4];
+wire	[5:0] 		sd_blk_cnt[4];
+
+wire	[3:0]		sd_rd;
+wire	[3:0]		sd_wr;
+wire	[3:0]		sd_ack;
+
+// SD byte level access. Signals for 2-PORT altsyncram.
+wire  	[7:0] 		sd_buff_addr;
+wire  	[7:0] 		sd_buff_dout;
+wire 	[7:0] 		sd_buff_din[4];
+wire        		sd_buff_wr;
 
 
 wire [9:0] center_joystick_y1   =  8'd128 + joya1[15:8];
@@ -402,6 +444,26 @@ coco3fpga_dw coco3 (
   .ioctl_download(ioctl_download),
   .ioctl_index(ioctl_index),
   .ioctl_wr(ioctl_wr),
+
+// SD block level interface
+
+  .img_mounted(img_mounted), 	// signaling that new image has been mounted
+  .img_readonly(img_readonly), 	// mounted as read only. valid only for active bit in img_mounted
+  .img_size(img_size),			// size of image in bytes. 1MB MAX!
+
+  .sd_lba(sd_lba),
+  .sd_blk_cnt(sd_blk_cnt), 		// number of blocks-1, total size ((sd_blk_cnt+1)*(1<<(BLKSZ+7))) must be <= 16384!
+
+  .sd_rd(sd_rd),
+  .sd_wr(sd_wr),
+  .sd_ack(sd_ack),
+
+// 	SD byte level access. Signals for 2-PORT altsyncram.
+  .sd_buff_addr(sd_buff_addr),
+  .sd_buff_dout(sd_buff_dout),
+  .sd_buff_din(sd_buff_din),
+  .sd_buff_wr(sd_buff_wr),
+
 .PROBE(probe[31:0]),
   .clk_Q_out(clk_Q_out),
   .casdout( casdout),
