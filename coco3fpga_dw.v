@@ -1787,6 +1787,7 @@ fdc coco_fdc(
 	.img_size(img_size),    			// size of image in bytes. 1MB MAX!
 
 	.sd_lba(sd_lba),
+	.sd_blk_cnt(sd_blk_cnt), 			// number of blocks-1, total size ((sd_blk_cnt+1)*(1<<(BLKSZ+7))) must be <= 16384!
 	.sd_rd(sd_rd),
 	.sd_wr(sd_wr),
 	.sd_ack(sd_ack),
