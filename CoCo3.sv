@@ -400,7 +400,7 @@ wire [7:0] b;
 wire easter_egg = ~status[10];
 wire	[31:0]	probe;
 
-assign USER_OUT[4:0] = probe[28:24];
+assign USER_OUT[5:0] = probe[29:24];
 
 coco3fpga_dw coco3 (
 .CLK50MHZ(CLK_50M),
@@ -435,8 +435,8 @@ coco3fpga_dw coco3 (
 .SOUND_OUT(cocosound),
 .SOUND_LEFT(audio_left),
 .SOUND_RIGHT(AUDIO_R),
-.OPTTXD(USER_OUT[5]),
-.OPTRXD(USER_IN[6]),
+//.OPTTXD(USER_OUT[5]),
+//.OPTRXD(USER_IN[6]),
 
 //	Removed offset addition
   .ioctl_addr(ioctl_addr),
@@ -464,7 +464,7 @@ coco3fpga_dw coco3 (
   .sd_buff_din(sd_buff_din),
   .sd_buff_wr(sd_buff_wr),
 
-.PROBE(probe[31:0]),
+  .PROBE(probe[31:0]),
   .clk_Q_out(clk_Q_out),
   .casdout( casdout),
   .cas_relay(cas_relay)

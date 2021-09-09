@@ -725,14 +725,15 @@ reg		[7:0]	SLAVE_ADD_LO;
 wire			SLAVE_WR;
 wire	[7:0]	ROM_DATA;
 wire	[7:0]	CART_DATA;
-
+wire	[7:0]	fdc_probe;
 
 // Probe's defined
 //assign PROBE[6:0] = {CART1_POL, CART1_BUF_RESET_N, CART1_FIRQ_STAT_N, CART1_CLK_N, CART1_FIRQ_N, RESET_N, PH_2};
 assign PROBE[7:0] = {1'b0, CART1_POL, CART1_FIRQ_N, CART1_FIRQ_BUF[0], CART1_CLK_N_D, CART1_FIRQ_RESET_N, CART1_CLK_N, PH_2};
 assign PROBE[15:8] = LEDR[7:0];
 assign PROBE[23:16] = LEDG[7:0];
-assign PROBE[31:24] = {3'b000, DATA_OUT[3], MOTOR, DRIVE_SEL_EXT[0], HDD_EN, ADDRESS[0]};
+//assign PROBE[31:24] = {3'b000, DATA_OUT[3], MOTOR, DRIVE_SEL_EXT[0], HDD_EN, ADDRESS[0]};
+assign PROBE[31:24] = {2'b00, fdc_probe[5:0]};
 
 // SRH MISTer
 //
@@ -1796,7 +1797,10 @@ fdc coco_fdc(
 	.sd_buff_addr(sd_buff_addr),
 	.sd_buff_dout(sd_buff_dout),
 	.sd_buff_din(sd_buff_din),
-	.sd_buff_wr(sd_buff_wr)
+	.sd_buff_wr(sd_buff_wr),
+	
+	.gp_control(GPIO_DIR),
+	.probe(fdc_probe)
 );
 
 `else

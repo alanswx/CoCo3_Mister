@@ -78,8 +78,12 @@ module fdc(
 	input  		[7:0]	sd_buff_addr,
 	input  		[7:0] 	sd_buff_dout,
 	output 		[7:0] 	sd_buff_din[4],
-	input        		sd_buff_wr
+	input        		sd_buff_wr,
+	
+	input		[7:0]	gp_control,
+	output		[7:0]	probe
 );
+
 
 wire	[7:0]	DRIVE_SEL_EXT;
 wire			MOTOR;
@@ -94,6 +98,8 @@ wire			RD;
 wire			CE;
 wire			HALT_EN_RST;
 wire	[7:0]	DATA_1793;
+
+assign probe = {temp_sd_ack, WR, RD, prepare, NMI_09, HALT};
 
 assign	DATA_HDD =		({HDD_EN, ADDRESS[3:0]} == 5'h10)	?	{HALT_EN, 
 																DRIVE_SEL_EXT[3],
@@ -113,7 +119,7 @@ assign CE = (HDD_EN & ADDRESS[3]);
 assign	NMI_09	=	DENSITY & INTRQ;				// Send NMI if Double Density (Halt Mode)
 
 //	HALT from disk controller
-assign	HALT	=	HALT_EN & DRQ;
+assign	HALT	=	~gp_control[1] & HALT_EN & DRQ;
 
 assign HALT_EN_RST = RESET_N & ~INTRQ; // From controller schematic
 
@@ -172,6 +178,7 @@ wire			temp_sd_wr;
 wire	[31:0]	temp_sd_lba;
 wire			temp_img_mounted;
 wire			temp_sd_ack;
+wire			prepare;
 
 assign 	drive_index = 	(DRIVE_SEL_EXT[3:0] == 4'b1000)	?	3'd3: 
 						(DRIVE_SEL_EXT[3:0] == 4'b0100)	?	3'd2:
@@ -219,11 +226,11 @@ assign temp_sd_ack =		(drive_index == 3'd3)		?	sd_ack[3]:
 							(drive_index == 3'd1)		?	sd_ack[1]:
 															sd_ack[0];
 
-wd1793 #(1,0) coco_wd1793
+wd1793 #(1) coco_wd1793
 (
-	.clk_sys(CLK),
+	.clk_sys(~CLK),
 	.ce(CLK_EN),
-	.reset(RESET_N),
+	.reset(~RESET_N),
 	.io_en(CE),
 	.rd(RD),
 	.wr(WR),
@@ -235,6 +242,7 @@ wd1793 #(1,0) coco_wd1793
 
 	.img_mounted(temp_img_mounted),
 	.img_size(img_size),
+	.prepare(prepare),
 
 	.sd_lba(temp_sd_lba),
 	.sd_rd(temp_sd_rd),
@@ -251,7 +259,7 @@ wd1793 #(1,0) coco_wd1793
 	.size_code(3'd5),		// 5 is 18 sector x 256 bits COCO standard
 	.layout(1'b1),			// 0 = Track-Side-Sector, 1 - Side-Track-Sector
 	.side(1'b0),			// Not support DS yet.
-	.ready(1'b1),			// ?? [always?]
+	.ready(gp_control[0]),	// ?? [always?]
 
 	.input_active(0),
 	.input_addr(0),
