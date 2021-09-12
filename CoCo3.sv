@@ -266,8 +266,8 @@ wire [21:0] gamma_bus;
 
 assign CLK_VIDEO = clk_sys;
 
-// SD - 4 drives 256K size blocks	
-hps_io #(.CONF_STR(CONF_STR),.PS2DIV(1000), .VDNUM(4), .BLKSZ(1)) hps_io
+// SD - 4 drives 512 size blocks [the wd1793 translates to a 256 byte sector size]	
+hps_io #(.CONF_STR(CONF_STR),.PS2DIV(1000), .VDNUM(4), .BLKSZ(2)) hps_io
 (
 //        .clk_sys(clk_sys),
 		  .clk_sys(CLK_50M),
@@ -333,7 +333,7 @@ wire	[3:0]		sd_wr;
 wire	[3:0]		sd_ack;
 
 // SD byte level access. Signals for 2-PORT altsyncram.
-wire  	[7:0] 		sd_buff_addr;
+wire  	[8:0] 		sd_buff_addr;
 wire  	[7:0] 		sd_buff_dout;
 wire 	[7:0] 		sd_buff_din[4];
 wire        		sd_buff_wr;

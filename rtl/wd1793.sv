@@ -80,8 +80,8 @@ assign dout      = q;
 assign drq       = s_drq;
 assign busy      = s_busy;
 assign intrq     = s_intrq;
-//assign sd_lba    = scan_active ? scan_addr[19:9] : buff_a[19:9] + sd_block; (SRH)256 bit sectors are wrong lba....
-assign sd_lba    = scan_active ? scan_addr[19:9] : buff_a[19:8] + sd_block;
+assign sd_lba    = scan_active ? scan_addr[19:9] : buff_a[19:9] + sd_block;
+//assign sd_lba    = scan_active ? scan_addr[19:9] : buff_a[19:8] + sd_block; (SRH) modified for 256 lba...[wrong]
 assign prepare   = EDSK ? scan_active : img_mounted;
 assign buff_addr = {buff_a[19:9], 9'd0} + byte_addr;
 assign buff_read = ((addr == A_DATA) && buff_rd);

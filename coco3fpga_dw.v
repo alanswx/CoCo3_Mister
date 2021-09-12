@@ -151,7 +151,7 @@ output 	reg  [3:0]	sd_wr,
 input        [3:0]	sd_ack,
 
 // SD byte level access. Signals for 2-PORT altsyncram.
-input  	[7:0] 		sd_buff_addr,
+input  	[8:0] 		sd_buff_addr,
 input  	[7:0] 		sd_buff_dout,
 output 	[7:0] 		sd_buff_din[4],
 input        		sd_buff_wr,
@@ -1755,7 +1755,8 @@ cpu09 GLBCPU09(
 	.rw(RW_N),
 	.data_in(DATA_IN),
 	.data_out(DATA_OUT),
-	.halt(HALT_BUF2),
+	.halt(HALT),
+//	.halt(HALT_BUF2),
 //	.halt(1'b0/*HALT_BUF2*/),
 	.hold(1'b0),
 	.irq(!CPU_IRQ_N),
@@ -1770,9 +1771,9 @@ cpu09 GLBCPU09(
 
 `ifdef NEW_COCO_FDC
 
+
 fdc coco_fdc(
 	.CLK(CLK50MHZ),     				// clock
-	.CLK_EN(PH_2),        				// ce at CPU clock rate
 	.RESET_N(RESET_N),	   				// async reset
 	.HDD_EN(HDD_EN),
 	.RW_N(RW_N),
@@ -1799,7 +1800,6 @@ fdc coco_fdc(
 	.sd_buff_din(sd_buff_din),
 	.sd_buff_wr(sd_buff_wr),
 	
-	.gp_control(GPIO_DIR),
 	.probe(fdc_probe)
 );
 
