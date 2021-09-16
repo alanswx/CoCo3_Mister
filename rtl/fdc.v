@@ -109,14 +109,14 @@ begin
 		end
 end
 
-//FDC read data path.  =$ff40 or wd1793
+//FDC read data path.  =$ff40 or wd1793(s)
 assign	DATA_HDD =		({HDD_EN, ADDRESS[3:0]} == 5'h10)	?	{HALT_EN, 
 																DRIVE_SEL_EXT[3],
 																DENSITY, 
 																WRT_PREC, 
 																MOTOR, 
 																DRIVE_SEL_EXT[2:0]}:
-						(CE == 1'b1)						?	DATA_1793:
+						(CE == 1'b1)						?	DATA_1793: //(1793[s])
 																8'h00;
 
 // $ff40 control register [part 1]
@@ -169,9 +169,15 @@ begin
 	end
 end
 
-// SD blk system is a array of 4 systems - one for each drive.  Note - some signals are shared between sd blk drives.
-// The wd1793 does not handle talking to more than 1 drive at a time.  The following selects [de-muxes] the sd
-// blk interfaces down to a single interface for the wd1793.
+// SD blk system is a array of 4 systems - one for each drive.  
+// To keep disk track memory, we created 4 wd1793's to match the sd block interfaces
+// For the interface back to the coco - we need to isolate the wd1793 the computer is talking
+// to and route those feedback signals back to the coco.  This is accomplished via the drive
+// select.  'drive_index' identifies which controller is addressd.
+
+// Note this will need to be fixed for DS disks.
+// 'drive_index[x]' will be needed due to the size changability...  TDB
+
 
 wire	[2:0]	drive_index;
 
@@ -218,7 +224,7 @@ assign	selected_INTRQ	=	(drive_index == 3'd0)	?	INTRQ[0]:
 assign	NMI_09	=	DENSITY & selected_INTRQ;				// Send NMI if Double Density (Halt Mode)
 
 //	HALT from disk controller
-
+//	Selected DRQ
 assign	selected_DRQ	=	(drive_index == 3'd0)	?	DRQ[0]:
 							(drive_index == 3'd1)	?	DRQ[1]:
 							(drive_index == 3'd2)	?	DRQ[2]:
@@ -229,13 +235,14 @@ assign	HALT	=	HALT_EN & ~selected_DRQ;
 
 assign	HALT_EN_RST = RESET_N & ~selected_INTRQ; // From controller schematic
 
+// Data bus selection
 assign	DATA_1793 	=		(drive_index == 3'd0)	?	dout[0]:
 							(drive_index == 3'd1)	?	dout[1]:
 							(drive_index == 3'd2)	?	dout[2]:
 							(drive_index == 3'd3)	?	dout[3]:
 														8'd0;
 
-// The wd1793 will allways transfer 1 blk. This is blk qty - 1 per spec.
+// The SD_BLK interface and thus the wd1793 will allways transfer 1 blk. This is blk qty - 1 per spec.
 assign sd_blk_cnt[3] = 6'd0;
 assign sd_blk_cnt[2] = 6'd0;
 assign sd_blk_cnt[1] = 6'd0;
@@ -244,8 +251,9 @@ assign sd_blk_cnt[0] = 6'd0;
 reg				drive_wp[4];
 reg				drive_ready[4];
 
-// As drives are mounted in MISTer this logic saves the write protect for
+// As drives are mounted in MISTer this logic saves the write protect and generates ready for
 // changing drives to the wd1793.
+// This can also get the disk size to properly handle DS drives - TBD
 
 // Drive 0
 
