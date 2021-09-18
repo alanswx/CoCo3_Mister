@@ -96,7 +96,7 @@ assign probe = {sd_ack, WR[0], RD[0], NMI_09, HALT};
 wire ena_1Mhz;
 wire [5:0]	div_1mhz;
 
-assign ena_1Mhz = (div_1mhz == 6'd49) ? 1'b1: 1'b0;
+assign ena_1Mhz = (div_1mhz == 6'd5) ? 1'b1: 1'b0;
 
 always@(negedge CLK or negedge RESET_N)
 begin
@@ -139,10 +139,10 @@ begin
 			begin
 				DRIVE_SEL_EXT <= 	{4'b0000,
 									DATA_IN[6],		// Drive Select [3] / Side Select
-									DATA_IN[2:0]};		// Drive Select [2:0]
-				MOTOR <= DATA_IN[3];					// Turn on motor, not used here just checked, 0=MotorOff 1=MotorOn
+									DATA_IN[2:0]};	// Drive Select [2:0]
+				MOTOR <= DATA_IN[3];				// Turn on motor, not used here just checked, 0=MotorOff 1=MotorOn
 				WRT_PREC <= DATA_IN[4];				// Write Precompensation, not used here
-				DENSITY <= DATA_IN[5];					// Density, not used here just checked
+				DENSITY <= DATA_IN[5];				// Density, not used here just checked
 			end
 			endcase
 		end
@@ -197,6 +197,7 @@ wire			selected_INTRQ;
 
 wire			WR[4];
 wire			RD[4];
+wire			RD_E[4];
 wire			CE;
 wire			HALT_EN_RST;
 wire	[7:0]	DATA_1793;
@@ -217,10 +218,10 @@ assign CE = (HDD_EN && ADDRESS[3]);
 //assign WR[2] = (~RW_N && CE) && (drive_index == 3'd2);
 //assign WR[3] = (~RW_N && CE) && (drive_index == 3'd3);
 
-//assign RD[0] = (RW_N && CE)  && (drive_index == 3'd0);
-//assign RD[1] = (RW_N && CE)  && (drive_index == 3'd1);
-//assign RD[2] = (RW_N && CE)  && (drive_index == 3'd2);
-//assign RD[3] = (RW_N && CE)  && (drive_index == 3'd3);
+assign RD[0] = ((RW_N && CE) || RD_E[0])  && (drive_index == 3'd0);
+assign RD[1] = ((RW_N && CE) || RD_E[1])  && (drive_index == 3'd1);
+assign RD[2] = ((RW_N && CE) || RD_E[2])  && (drive_index == 3'd2);
+assign RD[3] = ((RW_N && CE) || RD_E[3])  && (drive_index == 3'd3);
 
 assign read = (RW_N && CE);
 assign write = (~RW_N && CE);
@@ -239,6 +240,14 @@ begin
 		r_w_active <= 1'b0;
 		clk_1Mhz_enable_found <= 1'b0;
 		second_clk_1Mhz_enable_found <= 1'b0;
+		WR[0] <= 1'b0;
+		WR[1] <= 1'b0;
+		WR[2] <= 1'b0;
+		WR[3] <= 1'b0;
+		RD_E[0] <= 1'b0;
+		RD_E[1] <= 1'b0;
+		RD_E[2] <= 1'b0;
+		RD_E[3] <= 1'b0;
 	end
 	else
 	begin
@@ -270,13 +279,13 @@ begin
 			r_w_active <= 1'b1;
 			case (drive_index)
 				3'd0:
-					RD[0] <= 1'b1;
+					RD_E[0] <= 1'b1;
 				3'd1:
-					RD[1] <= 1'b1;
+					RD_E[1] <= 1'b1;
 				3'd2:
-					RD[2] <= 1'b1;
+					RD_E[2] <= 1'b1;
 				3'd3:
-					RD[3] <= 1'b1;
+					RD_E[3] <= 1'b1;
 			endcase
 		end
 
@@ -299,10 +308,10 @@ begin
 			WR[2] <= 1'b0;
 			WR[3] <= 1'b0;
 
-			RD[0] <= 1'b0;
-			RD[1] <= 1'b0;
-			RD[2] <= 1'b0;
-			RD[3] <= 1'b0;
+			RD_E[0] <= 1'b0;
+			RD_E[1] <= 1'b0;
+			RD_E[2] <= 1'b0;
+			RD_E[3] <= 1'b0;
 		end
 	end
 end

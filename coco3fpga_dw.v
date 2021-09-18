@@ -1800,7 +1800,7 @@ fdc coco_fdc(
 	.sd_buff_dout(sd_buff_dout),
 	.sd_buff_din(sd_buff_din),
 	.sd_buff_wr(sd_buff_wr),
-	
+
 	.probe(fdc_probe)
 );
 
@@ -2684,7 +2684,7 @@ begin
 // FF87-FF88
 //		SDRAM_ADDR[21:7] <= 15'h0000;
 // FF8E-FF8F
-		GPIO_DIR <= 8'h00;
+		GPIO_DIR <= 8'd0;
 		GPIO_OUT <= 8'h00;
 // FF90
 		ROM <= 2'b00;
