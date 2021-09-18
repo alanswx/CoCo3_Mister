@@ -1777,6 +1777,7 @@ fdc coco_fdc(
 	.RESET_N(RESET_N),	   				// async reset
 	.HDD_EN(HDD_EN),
 	.RW_N(RW_N),
+	.PH_2(PH_2),
 	.ADDRESS(ADDRESS[3:0]),	       		// i/o port addr [extended for coco]
 	.DATA_IN(DATA_OUT),        			// data in
 	.DATA_HDD(DATA_HDD),      			// data out
