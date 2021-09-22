@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Project Name:	COCO3 Targeting MISTer 
-// File Name:		fdc.v
+// File Name:		fdc.vs
 //
 // Floppy Disk Controller for MISTer
 //
@@ -9,7 +9,7 @@
 // Code based partily on work by Gary Becker
 // Copyright (c) 2008 Gary Becker (gary_l_becker@yahoo.com)
 //
-// Floopy Disk Controller by Stan Hodge (stan.pda@gmail.com)
+// Floopy Disk Controller (fdc.v) by Stan Hodge (stan.pda@gmail.com)
 // Copyright (c) 2021 by Stan Hodge (stan.pda@gmail.com)
 //
 // All rights reserved
@@ -52,14 +52,22 @@
 module fdc(
 	input        		CLK,     		// clock
 	input        		RESET_N,	   	// async reset
-	input        		HDD_EN,
-	input				RW_N,
-	input				PH_2,			// Processor sync'd enable
-	input  		[3:0]	ADDRESS,       	// i/o port addr [extended for coco]
+	input  		[1:0]	ADDRESS,       	// i/o port addr [extended for coco]
 	input  		[7:0]	DATA_IN,        // data in
 	output 		[7:0] 	DATA_HDD,      	// data out
 	output       		HALT,         	// DMA request
 	output       		NMI_09,
+
+	input				DS_ENABLE,		// Turn on DS support
+
+	input				FF40_CLK,		// FDC Write support
+	input				FF40_ENA,
+
+	input				FF40_RD,		// FDC Read Data support
+	input				WD1793_RD,
+
+	input				WD1793_WR_CTRL,	// 1793 RD & WR control signal generation
+	input				WD1793_RD_CTRL,
 
 // 	SD block level interface
 
@@ -90,38 +98,40 @@ wire			DENSITY;
 wire			HALT_EN;
 
 // Diagnostics only
-assign probe = {sd_ack, WR[0], RD[0], NMI_09, HALT};
+assign probe = {2'd0, HALT_EN_RST, sd_buff_wr, WR[0], RD[0], HALT_EN, HALT};
 
-// Generate a 1 Mhz enable for the fdc... and control writes
-wire ena_1Mhz;
-wire [5:0]	div_1mhz;
+// Generate a 8.333 Mhz enable for the fdc... and control writes
+wire ena_8Mhz;
+wire [5:0]	div_8mhz;
 
-assign ena_1Mhz = (div_1mhz == 6'd5) ? 1'b1: 1'b0;
+assign ena_8Mhz = (div_8mhz == 6'd5) ? 1'b1: 1'b0;
 
 always@(negedge CLK or negedge RESET_N)
 begin
-	if (~RESET_N)	div_1mhz <= 6'd0;
+	if (~RESET_N)	div_8mhz <= 6'd0;
 	else
 		begin
-			if (ena_1Mhz)
-				div_1mhz <= 6'd0;
+			if (ena_8Mhz)
+				div_8mhz <= 6'd0;
 			else
-				div_1mhz <= div_1mhz + 6'd1;
+				div_8mhz <= div_8mhz + 6'd1;
 		end
 end
 
 //FDC read data path.  =$ff40 or wd1793(s)
-assign	DATA_HDD =		({HDD_EN, ADDRESS[3:0]} == 5'h10)	?	{HALT_EN, 
+assign	DATA_HDD =		(FF40_RD)							?	{HALT_EN, 
 																DRIVE_SEL_EXT[3],
 																DENSITY, 
 																WRT_PREC, 
 																MOTOR, 
 																DRIVE_SEL_EXT[2:0]}:
-						(CE == 1'b1)						?	DATA_1793: //(1793[s])
+						(WD1793_RD)							?	DATA_1793: //(1793[s])
 																8'h00;
 
 // $ff40 control register [part 1]
-always @(negedge CLK or negedge RESET_N)
+
+
+always @(negedge FF40_CLK or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -132,25 +142,20 @@ begin
 	end
 	else
 	begin
-		if (PH_2)
+		if (FF40_ENA)
 		begin
-			case ({RW_N, HDD_EN, ADDRESS[3:0]})
-			6'b010000:
-			begin
-				DRIVE_SEL_EXT <= 	{4'b0000,
-									DATA_IN[6],		// Drive Select [3] / Side Select
-									DATA_IN[2:0]};	// Drive Select [2:0]
-				MOTOR <= DATA_IN[3];				// Turn on motor, not used here just checked, 0=MotorOff 1=MotorOn
-				WRT_PREC <= DATA_IN[4];				// Write Precompensation, not used here
-				DENSITY <= DATA_IN[5];				// Density, not used here just checked
-			end
-			endcase
+			DRIVE_SEL_EXT <= 	{4'b0000,
+								DATA_IN[6],		// Drive Select [3] / Side Select
+								DATA_IN[2:0]};	// Drive Select [2:0]
+			MOTOR <= DATA_IN[3];				// Turn on motor, not used here just checked, 0=MotorOff 1=MotorOn
+			WRT_PREC <= DATA_IN[4];				// Write Precompensation, not used here
+			DENSITY <= DATA_IN[5];				// Density, not used here just checked
 		end
 	end
 end
 
 // $ff40 control register [part 2]
-always @(negedge CLK or negedge HALT_EN_RST)
+always @(negedge FF40_CLK or negedge HALT_EN_RST)
 begin
 	if(!HALT_EN_RST)
 	begin
@@ -158,14 +163,9 @@ begin
 	end
 	else
 	begin
-		if (PH_2)
+		if (FF40_ENA)
 		begin
-			case ({RW_N, HDD_EN, ADDRESS[3:0]})
-			6'b010000:
-			begin
-				HALT_EN <= DATA_IN[7];					// Normal Halt enable, 0=Disabled 1=Enabled
-			end
-			endcase
+			HALT_EN <= DATA_IN[7];					// Normal Halt enable, 0=Disabled 1=Enabled
 		end
 	end
 end
@@ -198,38 +198,30 @@ wire			selected_INTRQ;
 wire			WR[4];
 wire			RD[4];
 wire			RD_E[4];
-wire			CE;
+//wire			CE;
 wire			HALT_EN_RST;
 wire	[7:0]	DATA_1793;
 wire	[7:0]	dout[4];
-wire			read;
-wire			write;
+reg				read;
+reg				write;
 reg 			read_d;
 reg				write_d;
 reg		[7:0]	DATA_IN_L;
 reg				r_w_active;
-reg				clk_1Mhz_enable_found;
-reg				second_clk_1Mhz_enable_found;
+reg				clk_8Mhz_enable_found;
+reg				second_clk_8Mhz_enable_found;
+reg				read1;
+reg				write1;
 
-assign CE = (HDD_EN && ADDRESS[3]);
+assign RD[0] = (read || RD_E[0])  && (drive_index == 3'd0);
+assign RD[1] = (read || RD_E[1])  && (drive_index == 3'd1);
+assign RD[2] = (read || RD_E[2])  && (drive_index == 3'd2);
+assign RD[3] = (read || RD_E[3])  && (drive_index == 3'd3);
 
-//assign WR[0] = (~RW_N && CE) && (drive_index == 3'd0);
-//assign WR[1] = (~RW_N && CE) && (drive_index == 3'd1);
-//assign WR[2] = (~RW_N && CE) && (drive_index == 3'd2);
-//assign WR[3] = (~RW_N && CE) && (drive_index == 3'd3);
-
-assign RD[0] = ((RW_N && CE) || RD_E[0])  && (drive_index == 3'd0);
-assign RD[1] = ((RW_N && CE) || RD_E[1])  && (drive_index == 3'd1);
-assign RD[2] = ((RW_N && CE) || RD_E[2])  && (drive_index == 3'd2);
-assign RD[3] = ((RW_N && CE) || RD_E[3])  && (drive_index == 3'd3);
-
-assign read = (RW_N && CE);
-assign write = (~RW_N && CE);
-
-// The idea here is to "stretch" the CPU read and write signals to ensure we catch a 1 mhz enable.
+// The idea here is to "stretch" the CPU read and write signals to ensure we catch a 8 mhz enable.
 // For writes we will buffer the data out to ensure it does not go away.
 // For reads it is expected that data is available asynchronusly at the cpu rate and the only reason to catch a 
-// 1Mhz edge is to update pointer and misc flags. 
+// 8Mhz edge is to update pointer and misc flags. 
 
 always @(negedge CLK or negedge RESET_N)
 begin
@@ -238,8 +230,8 @@ begin
 		read_d <= 1'b0;
 		write_d <= 1'b0;
 		r_w_active <= 1'b0;
-		clk_1Mhz_enable_found <= 1'b0;
-		second_clk_1Mhz_enable_found <= 1'b0;
+		clk_8Mhz_enable_found <= 1'b0;
+		second_clk_8Mhz_enable_found <= 1'b0;
 		WR[0] <= 1'b0;
 		WR[1] <= 1'b0;
 		WR[2] <= 1'b0;
@@ -248,9 +240,22 @@ begin
 		RD_E[1] <= 1'b0;
 		RD_E[2] <= 1'b0;
 		RD_E[3] <= 1'b0;
+		read1 <= 1'b0;
+		write1 <= 1'b0;
+		read <= 1'b0;
+		write <= 1'b0;
 	end
 	else
 	begin
+
+//		synchronizers
+		read1 <= WD1793_RD_CTRL;
+		read <= read1;
+		
+		write1 <= WD1793_WR_CTRL;
+		write <= write1;
+
+//		delays for edge detection
 		read_d <= read;
 		write_d <= write;
 		
@@ -290,17 +295,17 @@ begin
 		end
 
 //		Clears
-		if (ena_1Mhz && r_w_active)
-			clk_1Mhz_enable_found <= 1'b1;
+		if (ena_8Mhz && r_w_active)
+			clk_8Mhz_enable_found <= 1'b1;
 
-		if (ena_1Mhz && clk_1Mhz_enable_found)
-			second_clk_1Mhz_enable_found <= 1'b1;
+		if (ena_8Mhz && clk_8Mhz_enable_found)
+			second_clk_8Mhz_enable_found <= 1'b1;
 
 //		1 50Mhz clock later...
-		if (second_clk_1Mhz_enable_found)
+		if (second_clk_8Mhz_enable_found)
 		begin
-			clk_1Mhz_enable_found <= 1'b0;
-			second_clk_1Mhz_enable_found <= 1'b0;
+			clk_8Mhz_enable_found <= 1'b0;
+			second_clk_8Mhz_enable_found <= 1'b0;
 			r_w_active <= 1'b0;
 			
 			WR[0] <= 1'b0;
@@ -423,18 +428,20 @@ begin
 		end
 end
 
+wire	DS_ENA;
+
+assign	DS_ENA	=	(DS_ENABLE && DRIVE_SEL_EXT[3]);
 
 
 wd1793 #(1,1) coco_wd1793_0
 (
 	.clk_sys(~CLK),
-	.ce(ena_1Mhz),
+	.ce(ena_8Mhz),
 	.reset(~RESET_N),
 	.io_en(1'b1),
 	.rd(RD[0]),
 	.wr(WR[0]),
 	.addr(ADDRESS[1:0]),
-//	.din(DATA_IN),
 	.din(DATA_IN_L),
 	.dout(dout[0]),
 	.drq(DRQ[0]),
@@ -457,7 +464,7 @@ wd1793 #(1,1) coco_wd1793_0
 
 	.size_code(3'd5),		// 5 is 18 sector x 256 bits COCO standard
 	.layout(1'b1),			// 0 = Track-Side-Sector, 1 - Side-Track-Sector
-	.side(1'b0),			// Not support DS yet.
+	.side(DS_ENA),
 	.ready(drive_ready[0]),
 
 	.input_active(0),
@@ -470,13 +477,12 @@ wd1793 #(1,1) coco_wd1793_0
 wd1793 #(1,0) coco_wd1793_1
 (
 	.clk_sys(~CLK),
-	.ce(ena_1Mhz),
+	.ce(ena_8Mhz),
 	.reset(~RESET_N),
 	.io_en(1'b1),
 	.rd(RD[1]),
 	.wr(WR[1]),
 	.addr(ADDRESS[1:0]),
-//	.din(DATA_IN),
 	.din(DATA_IN_L),
 	.dout(dout[1]),
 	.drq(DRQ[1]),
@@ -499,7 +505,7 @@ wd1793 #(1,0) coco_wd1793_1
 
 	.size_code(3'd5),		// 5 is 18 sector x 256 bits COCO standard
 	.layout(1'b1),			// 0 = Track-Side-Sector, 1 - Side-Track-Sector
-	.side(1'b0),			// Not support DS yet.
+	.side(DS_ENA),
 	.ready(drive_ready[1]),
 
 	.input_active(0),
@@ -512,13 +518,12 @@ wd1793 #(1,0) coco_wd1793_1
 wd1793 #(1,0) coco_wd1793_2
 (
 	.clk_sys(~CLK),
-	.ce(ena_1Mhz),
+	.ce(ena_8Mhz),
 	.reset(~RESET_N),
 	.io_en(1'b1),
 	.rd(RD[2]),
 	.wr(WR[2]),
 	.addr(ADDRESS[1:0]),
-//	.din(DATA_IN),
 	.din(DATA_IN_L),
 	.dout(dout[2]),
 	.drq(DRQ[2]),
@@ -541,7 +546,7 @@ wd1793 #(1,0) coco_wd1793_2
 
 	.size_code(3'd5),		// 5 is 18 sector x 256 bits COCO standard
 	.layout(1'b1),			// 0 = Track-Side-Sector, 1 - Side-Track-Sector
-	.side(1'b0),			// Not support DS yet.
+	.side(DS_ENA),
 	.ready(drive_ready[2]),
 
 	.input_active(0),
@@ -554,13 +559,12 @@ wd1793 #(1,0) coco_wd1793_2
 wd1793 #(1,0) coco_wd1793_3
 (
 	.clk_sys(~CLK),
-	.ce(ena_1Mhz),
+	.ce(ena_8Mhz),
 	.reset(~RESET_N),
 	.io_en(1'b1),
 	.rd(RD[3]),
 	.wr(WR[3]),
 	.addr(ADDRESS[1:0]),
-//	.din(DATA_IN),
 	.din(DATA_IN_L),
 	.dout(dout[3]),
 	.drq(DRQ[3]),
@@ -583,7 +587,7 @@ wd1793 #(1,0) coco_wd1793_3
 
 	.size_code(3'd5),		// 5 is 18 sector x 256 bits COCO standard
 	.layout(1'b1),			// 0 = Track-Side-Sector, 1 - Side-Track-Sector
-	.side(1'b0),			// Not support DS yet.
+	.side(1'b0),			// DS can not be supported for drive 3.
 	.ready(drive_ready[3]),
 
 	.input_active(0),

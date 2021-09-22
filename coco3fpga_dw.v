@@ -1771,19 +1771,41 @@ cpu09 GLBCPU09(
 
 `ifdef NEW_COCO_FDC
 
+wire	FF40_ENA;
+wire	FF40_read;
+wire	wd1793_data_read;
+wire	wd1793_read;
+wire	wd1793_write;
+
+assign	FF40_ENA =			({PH_2, RW_N, HDD_EN, ADDRESS[3:0]} == 7'B1010000)	?	1'b1:
+																					1'b0;
+
+assign	FF40_read =			({HDD_EN, ADDRESS[3:0]} == 5'h10);
+assign	wd1793_data_read =	(HDD_EN && ADDRESS[3]);
+
+assign	wd1793_read =		(RW_N && HDD_EN && ADDRESS[3]);
+assign	wd1793_write =		(~RW_N && HDD_EN && ADDRESS[3]);
 
 fdc coco_fdc(
 	.CLK(CLK50MHZ),     				// clock
 	.RESET_N(RESET_N),	   				// async reset
-	.HDD_EN(HDD_EN),
-	.RW_N(RW_N),
-	.PH_2(PH_2),
-	.ADDRESS(ADDRESS[3:0]),	       		// i/o port addr [extended for coco]
+	.ADDRESS(ADDRESS[1:0]),	       		// i/o port addr for wd1793 & FF48+
 	.DATA_IN(DATA_OUT),        			// data in
 	.DATA_HDD(DATA_HDD),      			// data out
 	.HALT(HALT),         				// DMA request
 	.NMI_09(NMI_09),
+	.DS_ENABLE(1'b0),					// DS support - '1 to enable drives 0-2
 
+//	FDC host r/w handling
+	.FF40_CLK(CLK50MHZ),
+	.FF40_ENA(FF40_ENA),
+
+	.FF40_RD(FF40_read),
+	.WD1793_RD(wd1793_data_read),
+	
+	.WD1793_WR_CTRL(wd1793_write),
+	.WD1793_RD_CTRL(wd1793_read),
+	
 // 	SD block level interface
 	.img_mounted(img_mounted), 			// signaling that new image has been mounted
 	.img_readonly(img_readonly), 		// mounted as read only. valid only for active bit in img_mounted
