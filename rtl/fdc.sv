@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Project Name:	COCO3 Targeting MISTer 
-// File Name:		fdc.vs
+// File Name:		fdc.sv
 //
 // Floppy Disk Controller for MISTer
 //
