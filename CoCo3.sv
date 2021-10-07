@@ -231,6 +231,10 @@ assign clk_sys=clk_vid;
 //assign clk_vid = CLK_50M;
 
 wire pll_locked;
+wire pll2_locked;
+
+wire clk_114, clk_57, clk_28;
+
 
 pll pll
 (
@@ -238,8 +242,18 @@ pll pll
         .rst(0),
         .outclk_0(clk_ram),
         .outclk_1(clk_vid),
-		  .outclk_2(clk_sys_2),
+		.outclk_2(clk_sys_2),
         .locked(pll_locked)
+);
+
+pll2 pll2
+(
+        .refclk(CLK_50M),
+        .rst(0),
+        .outclk_0(clk_114),
+        .outclk_1(clk_57),
+		.outclk_2(clk_28),
+        .locked(pll2_locked)
 );
 
 
@@ -465,10 +479,27 @@ coco3fpga_dw coco3 (
   .sd_buff_wr(sd_buff_wr),
 
   .PROBE(probe[31:0]),
+
+//	Cassette i/o
   .clk_Q_out(clk_Q_out),
   .casdout( casdout),
-  .cas_relay(cas_relay)
+  .cas_relay(cas_relay),
+  
+//	CLOCKS
 
+	.clk_114(clk_114),
+	.clk_57(clk_57),
+	.clk_28(clk_28),
+	
+//	SDRAM
+
+	.sdram_addr(sdram_addr),
+	.sdram_wtbt(sdram_wtbt),
+	.sdram_data_o(sdram_data_o),
+	.sdram_data_i(sdram_data_i),
+	.sdram_rd(sdram_rd),
+	.sdram_we(sdram_we),
+	.sdram_ready(sdram_ready)
 
 );
 
@@ -492,26 +523,53 @@ wire reset = RESET | status[0] | buttons[1];
 wire clk_Q_out;
 
 wire [24:0] sdram_addr;
-wire [7:0] sdram_data;
-wire sdram_rd;
-wire load_tape = ioctl_index == 2;
+wire [7:0] 	sdram_data_o;
+wire [7:0] 	sdram_data_i;
+wire sdram_rd, sdram_we;
+wire [1:0]	sdram_wtbt;
+wire sdram_ready;
 
 sdram sdram
 (
 	.*,
 	.init(~pll_locked),
-	.clk(CLK_50M/*clk_sys*/),
-	.addr(ioctl_download ? ioctl_addr : sdram_addr),
-	.wtbt(0),
-	.dout(sdram_data),
-	.din(ioctl_data),
+	.clk(clk_114),
+	.addr(sdram_addr),
+	.wtbt(sdram_wtbt),
+	.dout(sdram_data_o),
+	.din(sdram_data_i),
 	.rd(sdram_rd),
-	.we(ioctl_wr & load_tape),
-	.ready()
+	.we(sdram_we),
+	.ready(sdram_ready)
 );
 
 wire casdout;
 wire cas_relay;
+wire load_tape = ioctl_index == 2;
+
+wire	[15:0]	ram_addr;
+wire	[7:0]	ram_data_o;
+wire	ram_rd;
+wire	ram_wr;
+wire	[15:0]	ram_ad_buf;
+
+always @(posedge CLK_50M)
+begin
+	ram_wr <= ~(ioctl_wr & load_tape);
+	if (ioctl_download)
+		ram_ad_buf <= ioctl_addr;
+	else
+		ram_ad_buf <= ram_addr;
+end
+
+COCO_SRAM CC3_CAS1(
+.CLK(CLK_50M),
+.ADDR(ram_ad_buf),
+.R_W(ram_wr),
+.DATA_I(ioctl_data),
+.DATA_O(ram_data_o)
+);
+
 
 cassette cassette(
   .clk(CLK_50M/*clk_sys*/),
@@ -520,9 +578,11 @@ cassette cassette(
   .rewind(status[15]),
   .en(cas_relay),
 
-  .sdram_addr(sdram_addr),
-  .sdram_data(sdram_data),
-  .sdram_rd(sdram_rd),
+//  .sdram_addr(sdram_addr),
+//  .sdram_data(sdram_data),
+  .sdram_addr(ram_addr),
+  .sdram_data(ram_data_o),
+  .sdram_rd(ram_rd), // Not connected for sram
 
   .data(casdout)
 //   .status(tape_status)

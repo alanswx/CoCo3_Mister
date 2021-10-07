@@ -162,9 +162,26 @@ inout	[7:0]		GPIO,
 input				EE_N,
 output	[31:0]		PROBE,
 
-output clk_Q_out,
-output cas_relay,
-input casdout 
+output 				clk_Q_out,
+output 				cas_relay,
+input 				casdout,
+
+//	CLOCKS
+
+input				clk_114,
+input				clk_57,
+input				clk_28,
+	
+//	SDRAM
+
+output	[24:0]		sdram_addr,
+output	[1:0]		sdram_wtbt,
+input	[15:0]		sdram_data_o,
+output	[15:0]		sdram_data_i,
+output				sdram_rd,
+output				sdram_we,
+input				sdram_ready
+
 );
 
 assign clk_Q_out = PH_2;
@@ -1024,6 +1041,16 @@ COCO_SRAM CC3_SRAM1(
 .DATA_I(RAM0_DATA_I[15:8]),
 .DATA_O(RAM0_DATA_O[15:8])
 );
+
+//	Temp SDRAM ties
+
+assign sdram_rd = 1'b0;
+assign sdram_we = 1'b0;
+assign sdram_wtbt = 2'b00;
+assign sdram_data_i = 16'b0000000000000000;
+assign sdram_addr = 25'b0000000000000000000000000;
+
+
 
 assign	ENA_ORCC =	({ROM_SEL, MPI_CTS} == 3'b100)						?	1'b1:		// Orchestra-90CC C000-DFFF Slot 1
 																								1'b0;
