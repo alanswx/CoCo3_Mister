@@ -1044,11 +1044,36 @@ COCO_SRAM CC3_SRAM1(
 
 //	Temp SDRAM ties
 
-assign sdram_rd = 1'b0;
-assign sdram_we = 1'b0;
-assign sdram_wtbt = 2'b00;
-assign sdram_data_i = 16'b0000000000000000;
-assign sdram_addr = 25'b0000000000000000000000000;
+wire	[7:0]	sum;
+
+//assign sdram_rd = 1'b0;
+//assign sdram_we = 1'b0;
+//assign sdram_wtbt = 2'b00;
+//assign sdram_data_i = 16'b0000000000000000;
+//assign sdram_addr = 25'b0000000000000000000000000;
+
+sdram_TST coco_sdram_TST (
+
+.CLK(clk_114),     		// clock
+.RESET_N(RESET_N),	   	// async reset
+
+.count(GPIO_DIR),
+.read_write(GPIO_OUT[1]),		//read=1
+.start(GPIO_OUT[0]),
+.start_edge(GPIO_OUT[2]),	
+
+.sum(sum),
+	
+//	SDRAM
+
+.sdram_addr(sdram_addr),
+.sdram_wtbt(sdram_wtbt),
+.sdram_data_o(sdram_data_o),
+.sdram_data_i(sdram_data_i),
+.sdram_rd(sdram_rd),
+.sdram_we(sdram_we),
+.sdram_ready(sdram_ready)
+);
 
 
 
@@ -1231,6 +1256,7 @@ assign	DATA_IN =
 //									(ADDRESS == 16'hFF86)		?	SDRAM_DOUT[15:8]:
 //									(ADDRESS == 16'hFF87)		?	{1'b0, SDRAM_ADDR[21:15]}:
 //									(ADDRESS == 16'hFF88)		?	SDRAM_ADDR[14:7]:
+									(ADDRESS == 16'hFF88)		?	sum:
 
 									(ADDRESS == 16'hFF8E)		?	GPIO_DIR:
 									(ADDRESS == 16'hFF8F)		?	GPIO:
