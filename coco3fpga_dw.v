@@ -175,11 +175,11 @@ input				clk_28,
 //	SDRAM
 
 output	[24:0]		sdram_addr,
-output	[1:0]		sdram_wtbt,
-input	[15:0]		sdram_data_o,
-output	[15:0]		sdram_data_i,
-output				sdram_rd,
-output				sdram_we,
+input	[31:0]		sdram_ldout,
+input	[15:0]		sdram_dout,
+output	[7:0]		sdram_din,
+output				sdram_req,
+output				sdram_rnw,
 input				sdram_ready
 
 );
@@ -1045,6 +1045,7 @@ COCO_SRAM CC3_SRAM1(
 //	Temp SDRAM ties
 
 wire	[7:0]	sum;
+wire	[31:0]	sdram_rd_buf;
 
 //assign sdram_rd = 1'b0;
 //assign sdram_we = 1'b0;
@@ -1052,7 +1053,19 @@ wire	[7:0]	sum;
 //assign sdram_data_i = 16'b0000000000000000;
 //assign sdram_addr = 25'b0000000000000000000000000;
 
-sdram_TST coco_sdram_TST (
+//	SDRAM
+
+//output	[24:0]		sdram_addr,
+//input	[31:0]		sdram_ldout,
+//input	[15:0]		sdram_dout,
+//output	[7:0]		sdram_din,
+//output				sdram_req,
+//output				sdran_rnw,
+//input				sdram_ready
+
+
+sdram_TST coco_sdram_TST 
+(
 
 .CLK(clk_114),     		// clock
 .RESET_N(RESET_N),	   	// async reset
@@ -1061,17 +1074,20 @@ sdram_TST coco_sdram_TST (
 .read_write(GPIO_OUT[1]),		//read=1
 .start(GPIO_OUT[0]),
 .start_edge(GPIO_OUT[2]),	
+.rd_buf_mode(GPIO_OUT[3]),		// 0- show 32 bit captured value, 1- show back to back 16 bit captured value
+.rd_inc(GPIO_OUT[6:4]),			// 3 bit read address increment value
 
 .sum(sum),
+.sdram_rd_buf(sdram_rd_buf),
 	
 //	SDRAM
 
 .sdram_addr(sdram_addr),
-.sdram_wtbt(sdram_wtbt),
-.sdram_data_o(sdram_data_o),
-.sdram_data_i(sdram_data_i),
-.sdram_rd(sdram_rd),
-.sdram_we(sdram_we),
+.sdram_dout(sdram_dout),
+.sdram_ldout(sdram_ldout),
+.sdram_din(sdram_din),
+.sdram_req(sdram_req),
+.sdram_rnw(sdram_rnw),
 .sdram_ready(sdram_ready)
 );
 
@@ -1255,6 +1271,10 @@ assign	DATA_IN =
 //									(ADDRESS == 16'hFF85)		?	SDRAM_DOUT[7:0]:
 //									(ADDRESS == 16'hFF86)		?	SDRAM_DOUT[15:8]:
 //									(ADDRESS == 16'hFF87)		?	{1'b0, SDRAM_ADDR[21:15]}:
+									(ADDRESS == 16'hFF84)		?	sdram_rd_buf[7:0]:
+									(ADDRESS == 16'hFF85)		?	sdram_rd_buf[15:8]:
+									(ADDRESS == 16'hFF86)		?	sdram_rd_buf[23:16]:
+									(ADDRESS == 16'hFF87)		?	sdram_rd_buf[31:24]:
 //									(ADDRESS == 16'hFF88)		?	SDRAM_ADDR[14:7]:
 									(ADDRESS == 16'hFF88)		?	sum:
 

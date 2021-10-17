@@ -494,11 +494,11 @@ coco3fpga_dw coco3 (
 //	SDRAM
 
 	.sdram_addr(sdram_addr),
-	.sdram_wtbt(sdram_wtbt),
-	.sdram_data_o(sdram_data_o),
-	.sdram_data_i(sdram_data_i),
-	.sdram_rd(sdram_rd),
-	.sdram_we(sdram_we),
+	.sdram_ldout(sdram_ldout),
+	.sdram_dout(sdram_dout),
+	.sdram_din(sdram_din),
+	.sdram_req(sdram_req),
+	.sdram_rnw(sdram_rnw),
 	.sdram_ready(sdram_ready)
 
 );
@@ -523,24 +523,24 @@ wire reset = RESET | status[0] | buttons[1];
 wire clk_Q_out;
 
 wire [24:0] sdram_addr;
-wire [7:0] 	sdram_data_o;
-wire [7:0] 	sdram_data_i;
-wire sdram_rd, sdram_we;
-wire [1:0]	sdram_wtbt;
+wire [31:0]	sdram_ldout;
+wire [15:0]	sdram_dout;
+wire [7:0] sdram_din;
+wire sdram_req, sdram_rnw;
 wire sdram_ready;
 
-sdram sdram
+sdram_32r8w coco3_sdram
 (
 	.*,
-	.init(~pll_locked),
+	.init(reset),
 	.clk(clk_114),
-	.addr(sdram_addr),
-	.wtbt(sdram_wtbt),
-	.dout(sdram_data_o),
-	.din(sdram_data_i),
-	.rd(sdram_rd),
-	.we(sdram_we),
-	.ready(sdram_ready)
+	.sdram_addr(sdram_addr[24:0]),
+	.sdram_ldout(sdram_ldout),
+	.sdram_dout(sdram_dout),
+	.sdram_din(sdram_din),
+	.sdram_req(sdram_req),
+	.sdram_rnw(sdram_rnw),
+	.sdram_ready(sdram_ready)
 );
 
 wire casdout;
