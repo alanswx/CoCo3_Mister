@@ -713,6 +713,7 @@ reg		[7:0]	GPIO_DIR;
 wire	[7:0]	ROM_DATA;
 wire	[7:0]	CART_DATA;
 wire	[7:0]	fdc_probe;
+wire			clk_sys;
 
 // Probe's defined
 //assign PROBE[6:0] = {CART1_POL, CART1_BUF_RESET_N, CART1_FIRQ_STAT_N, CART1_CLK_N, CART1_FIRQ_N, RESET_N, PH_2};
@@ -723,6 +724,8 @@ assign PROBE[23:16] = LEDG[7:0];
 assign PROBE[31:24] = {2'b00, fdc_probe[5:0]};
 
 assign ROM_BANK = 3'b000;
+
+assign clk_sys = CLK_57;
 
 // SRH MISTer
 //
@@ -807,7 +810,7 @@ assign LEDR[17:8] = 10'b0000000000;
 //	MCLOCK[10] = 50/2048	= 24.4140625 KHz
 //	MCLOCK[11] = 50/4096	= 12.20703125 KHz
 
-always @ (negedge CLK50MHZ)				//50 MHz
+always @ (negedge clk_sys)				//50 MHz
 begin
 	MCLOCK <= MCLOCK + 1'b1;
 	MCLOCK_DELAY <= MCLOCK;
@@ -965,7 +968,7 @@ assign FLASH_CE_S =	({RAM, ROM[1], ADDRESS[15:14]} ==  4'b0010)						?	1'b1:		//
 COCO_ROM CC3_ROM(
 .ADDR(FLASH_ADDRESS[15:0]),
 .DATA(ROM_DATA),
-.CLK(~CLK50MHZ),
+.CLK(~clk_sys),
 .WR_ADDR(ioctl_addr[15:0]),
 .WR_DATA(ioctl_data[7:0]),
 .WRITE((ioctl_index[5:0] == 6'd0) & ioctl_wr)
@@ -988,7 +991,7 @@ assign FLASH_DATA =	ENA_PAK	?	CART_DATA:
 COCO_ROM CC3_ROM_CART(
 .ADDR(FLASH_ADDRESS[15:0]),
 .DATA(CART_DATA),
-.CLK(~CLK50MHZ),
+.CLK(~clk_sys),
 .WR_ADDR(ioctl_addr[15:0]),
 .WR_DATA(ioctl_data[7:0]),
 .WRITE((ioctl_index[5:0] == 6'd1) & ioctl_wr)
@@ -996,7 +999,7 @@ COCO_ROM CC3_ROM_CART(
 
 
 COCO_SRAM CC3_SRAM0(
-.CLK(~CLK50MHZ),
+.CLK(~clk_sys),
 .ADDR(RAM0_ADDRESS[15:0]),
 .R_W(RAM0_RW_N | RAM0_BE0_N),
 .DATA_I(RAM0_DATA_I[7:0]),
@@ -1004,7 +1007,7 @@ COCO_SRAM CC3_SRAM0(
 );
 
 COCO_SRAM CC3_SRAM1(
-.CLK(~CLK50MHZ),
+.CLK(~clk_sys),
 .ADDR(RAM0_ADDRESS[15:0]),
 .R_W(RAM0_RW_N | RAM0_BE1_N),
 .DATA_I(RAM0_DATA_I[15:8]),
@@ -1256,7 +1259,7 @@ assign	GPIO[7] = GPIO_DIR[7]	?	GPIO_OUT[7]:
 //				A98 7654 3210 fedc ba98	7654 3210
 // 27 bit.....  011 0010 0110 0100 1001 1001 0010
 // 
-always @(negedge CLK50MHZ or negedge RESET_N)
+always @(negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -1366,7 +1369,7 @@ begin
 end
 
 //Switch selectable baud rate
-always @(negedge CLK50MHZ or negedge RESET_N)
+always @(negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -1434,7 +1437,7 @@ begin
 end
 */
 // 14.814814815 MHz / 8 = 1.851851852 MHz / 16 = 115740.741 = 115200 + 0.469393%
-always @(negedge CLK50MHZ or negedge RESET_N)
+always @(negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -1449,7 +1452,7 @@ end
 
 //BANKS
 // CPU clock / SRAM Signals for old SRAM
-always @(negedge CLK50MHZ or negedge RESET_N)
+always @(negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -1582,7 +1585,7 @@ assign RESET_P =	!BUTTON_N[3]					// Button
 					| RESET; 						// CTRL-ALT-DEL or CTRL-ALT-INS
 
 // Make sure all resets are enabled for a long enough time to allow voltages to settle
-always @ (negedge CLK50MHZ or posedge RESET_P)		// 50 MHz / 64
+always @ (negedge clk_sys or posedge RESET_P)		// 50 MHz / 64
 begin
 	if(RESET_P)
 	begin
@@ -1615,7 +1618,7 @@ end
 
 // CPU section copyrighted by John Kent
 cpu09 GLBCPU09(
-	.clk(CLK50MHZ),
+	.clk(clk_sys),
 	.ce(PH_2),
 	.rst(CPU_RESET),
 	.vma(VMA),
@@ -1652,7 +1655,7 @@ assign	wd1793_read =		(RW_N && HDD_EN && ADDRESS[3]);
 assign	wd1793_write =		(~RW_N && HDD_EN && ADDRESS[3]);
 
 fdc coco_fdc(
-	.CLK(CLK50MHZ),     				// clock
+	.CLK(clk_sys),     					// clock
 	.RESET_N(RESET_N),	   				// async reset
 	.ADDRESS(ADDRESS[1:0]),	       		// i/o port addr for wd1793 & FF48+
 	.DATA_IN(DATA_OUT),        			// data in
@@ -1662,7 +1665,7 @@ fdc coco_fdc(
 	.DS_ENABLE(1'b0),					// DS support - '1 to enable drives 0-2
 
 //	FDC host r/w handling
-	.FF40_CLK(CLK50MHZ),
+	.FF40_CLK(clk_sys),
 	.FF40_ENA(FF40_ENA),
 
 	.FF40_RD(FF40_read),
@@ -1697,7 +1700,7 @@ fdc coco_fdc(
 // Interrupt Sources
 //***********************************************************************
 // Interrupt source for CART signal
-always @(negedge CLK50MHZ or negedge RESET_N)
+always @(negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -1730,7 +1733,7 @@ assign KEY_INT_N = (KEYBOARD_IN == 8'hFF);
 //***********************************************************************
 // Interrupt Latch RESETs
 //***********************************************************************
-always @(negedge CLK50MHZ or negedge RESET_N)
+always @(negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -1861,7 +1864,7 @@ end
 // Polarity	HSYNC1_POL
 // Clear		FF00
 assign HSYNC1_CLK_N = HSYNC_INT_N ^ HSYNC1_POL;
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -1880,7 +1883,7 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ or negedge RST_FF00_N)
+always @ (negedge clk_sys or negedge RST_FF00_N)
 begin
 	if(!RST_FF00_N)
 	begin
@@ -1903,7 +1906,7 @@ end
 // Polarity	VSYNC1_POL
 // Clear		FF02
 assign VSYNC1_CLK_N = VSYNC_INT_N ^ VSYNC1_POL;
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -1922,7 +1925,7 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ or negedge RST_FF02_N)
+always @ (negedge clk_sys or negedge RST_FF02_N)
 begin
 	if(!RST_FF02_N)
 	begin
@@ -1953,13 +1956,13 @@ assign CART1_BUF_RESET_N =		  RESET_N
 assign CART1_FIRQ_RESET_N =	CART1_BUF_RESET_N & RST_FF22_N;
 assign CART1_CLK_N = CART_INT_N ^ CART1_POL;
 
-always @ (negedge CLK50MHZ)
+always @ (negedge clk_sys)
 begin
 	if (PH_2)
 		CART_POL_BUF <= {CART_POL_BUF[0],CART1_POL}; 
 end
 
-always @ (negedge CLK50MHZ or negedge CART1_BUF_RESET_N)
+always @ (negedge clk_sys or negedge CART1_BUF_RESET_N)
 begin
 	if(!CART1_BUF_RESET_N)
 	begin
@@ -1977,11 +1980,11 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ)
+always @ (negedge clk_sys)
 	CART1_CLK_N_D <= CART1_CLK_N;
 
 
-always @ (negedge CLK50MHZ or negedge CART1_FIRQ_RESET_N)
+always @ (negedge clk_sys or negedge CART1_FIRQ_RESET_N)
 begin
 	if(!CART1_FIRQ_RESET_N)
 	begin
@@ -2009,7 +2012,7 @@ end
 // Clear		FF93
 
 
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -2028,7 +2031,7 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ or negedge RST_FF93_N)
+always @ (negedge clk_sys or negedge RST_FF93_N)
 begin
 	if(!RST_FF93_N)
 	begin
@@ -2049,7 +2052,7 @@ end
 // Input		VSYNC_FIRQ_INT_N
 // Switch	VSYNC3_INT
 // Clear		FF93
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -2068,7 +2071,7 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ or negedge RST_FF93_N)
+always @ (negedge clk_sys or negedge RST_FF93_N)
 begin
 	if(!RST_FF93_N)
 	begin
@@ -2089,7 +2092,7 @@ end
 // Input		CART_INT_N
 // Switch	CART3_FIRQ_INT
 // Clear		FF93
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -2108,7 +2111,7 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ or negedge RST_FF93_N)
+always @ (negedge clk_sys or negedge RST_FF93_N)
 begin
 	if(!RST_FF93_N)
 	begin
@@ -2129,7 +2132,7 @@ end
 // Input		KEY_INT_N
 // Switch	KEY3_FIRQ_INT
 // Clear		FF93
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -2148,7 +2151,7 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ or negedge RST_FF93_N)
+always @ (negedge clk_sys or negedge RST_FF93_N)
 begin
 	if(!RST_FF93_N)
 	begin
@@ -2169,7 +2172,7 @@ end
 // Input		TIMER_INT_N
 // Switch	TIMER3_FIRQ_INT
 // Clear		FF93
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -2188,7 +2191,7 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ or negedge RST_FF93_N)
+always @ (negedge clk_sys or negedge RST_FF93_N)
 begin
 	if(!RST_FF93_N)
 	begin
@@ -2212,7 +2215,7 @@ end
 // Input		HSYNC_INT_N
 // Switch	HSYNC3_IRQ_INT
 // Clear		FF92
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -2229,7 +2232,7 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ or negedge RST_FF92_N)
+always @ (negedge clk_sys or negedge RST_FF92_N)
 begin
 	if(!RST_FF92_N)
 	begin
@@ -2250,7 +2253,7 @@ end
 // Input		VSYNC_IRQ_INT_N
 // Switch	VSYNC3_IRQ_INT
 // Clear		FF92
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -2267,7 +2270,7 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ or negedge RST_FF92_N)
+always @ (negedge clk_sys or negedge RST_FF92_N)
 begin
 	if(!RST_FF92_N)
 	begin
@@ -2288,7 +2291,7 @@ end
 // Input		CART_INT_N
 // Switch	CART3_IRQ_INT
 // Clear		FF92
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -2305,7 +2308,7 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ or negedge RST_FF92_N)
+always @ (negedge clk_sys or negedge RST_FF92_N)
 begin
 	if(!RST_FF92_N)
 	begin
@@ -2326,7 +2329,7 @@ end
 // Input		KEY_INT_N
 // Switch	KEY3_IRQ_INT
 // Clear		FF92
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -2343,7 +2346,7 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ or negedge RST_FF92_N)
+always @ (negedge clk_sys or negedge RST_FF92_N)
 begin
 	if(!RST_FF92_N)
 	begin
@@ -2364,7 +2367,7 @@ end
 // Input		TIMER_INT_N
 // Switch	TIMER3_IRQ_INT
 // Clear		FF92
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -2381,7 +2384,7 @@ begin
 	end
 end
 
-always @ (negedge CLK50MHZ or negedge RST_FF92_N)
+always @ (negedge clk_sys or negedge RST_FF92_N)
 begin
 	if(!RST_FF92_N)
 	begin
@@ -2411,7 +2414,7 @@ assign OPTTXD =		1'b0;
 assign TMR_CLK = !TIMER_INS	?	(!H_SYNC_N | !H_FLAG):
 											CLK3_57MHZ;					// 50 MHz / 14 = 3.57 MHz
 assign CLK3_57MHZ = DIV_14;
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -2433,7 +2436,7 @@ begin
 	end
 end
 
-always @(negedge CLK50MHZ or negedge TMR_RST_N)
+always @(negedge clk_sys or negedge TMR_RST_N)
 begin
 	if(!TMR_RST_N)
 	begin
@@ -2479,7 +2482,7 @@ begin
 end
 
 // Most of the latches for settings
-always @ (negedge CLK50MHZ or negedge RESET_N)
+always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
@@ -3786,7 +3789,7 @@ end
   buttons are handled below in the keyboard routines 
 */
 
-always @(posedge CLK50MHZ) begin
+always @(posedge clk_sys) begin
   case (SEL)
   2'b00:
 		if (joya2[15:10] > DTOA_CODE)
@@ -3896,7 +3899,7 @@ assign KEYBOARD_IN[7] =	 JSTICK;											// Joystick input
 // PS2 Keyboard interface
 COCOKEY coco_keyboard(
 		.RESET_N(RESET_N),
-		.CLK50MHZ(CLK50MHZ),
+		.CLK50MHZ(clk_sys),
 		.SLO_CLK(V_SYNC_N),
 //		.SLO_CLK(MCLOCK[19]),
 		.PS2_CLK(ps2_clk),
@@ -3915,7 +3918,7 @@ COCOKEY coco_keyboard(
 assign VGA_CLK = MCLOCK[0];
 
 // Video DAC
-always @ (negedge CLK50MHZ)
+always @ (negedge clk_sys)
 begin
 	if (MCLOCK[0])
 	begin
