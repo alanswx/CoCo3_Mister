@@ -83,7 +83,7 @@ assign AUD_XCK = MCLOCK[0];  // 25Mhz
 always @(posedge AUD_BCLK)
 begin
 	DACLRCLK <= AUD_DACLRCK;
-	ADCLRCLK <= AUD_ADCLRCK;
+//	ADCLRCLK <= AUD_ADCLRCK;
 end
 //Double Buffer Left and Right
 always @(negedge AUD_DACLRCK)

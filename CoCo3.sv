@@ -224,25 +224,25 @@ localparam  CONF_STR = {
 
 ////////////////////   CLOCKS   ///////////////////
 
-wire clk_sys,clk_ram, clk_vid,clk_sys_2;
+//wire clk_sys,clk_ram, clk_vid,clk_sys_2;
+wire clk_sys;
 
-assign clk_sys=clk_vid;
-//assign clk_sys = CLK_50M;
-//assign clk_vid = CLK_50M;
+assign clk_sys=CLK_57;
+//assign clk_sys=clk_vid; (SRH)
 
 wire pll_locked, pll2_locked;
 wire CLK_114, CLK_57, CLK_28, CLK_14;
 
 
-pll pll
-(
-        .refclk(CLK_50M),
-        .rst(0),
-        .outclk_0(clk_ram),
-        .outclk_1(clk_vid),
-		.outclk_2(clk_sys_2),
-        .locked(pll_locked)
-);
+//pll pll (SRH)
+//(
+//        .refclk(CLK_50M),
+//        .rst(0),
+//        .outclk_0(clk_ram),
+//        .outclk_1(clk_vid),
+// 		  .outclk_2(clk_sys_2),
+//        .locked(pll_locked)
+//);
 
 pll2 Master_CoCo3_CLKS
 (
@@ -281,8 +281,8 @@ assign CLK_VIDEO = clk_sys;
 // SD - 4 drives 512 size blocks [the wd1793 translates to a 256 byte sector size]	
 hps_io #(.CONF_STR(CONF_STR),.PS2DIV(1000), .VDNUM(4), .BLKSZ(2)) hps_io
 (
-//        .clk_sys(clk_sys),
-		  .clk_sys(CLK_50M),
+        .clk_sys(clk_sys),
+//		.clk_sys(CLK_50M), (SRH)
         .HPS_BUS(HPS_BUS),
 
 
@@ -316,14 +316,12 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(1000), .VDNUM(4), .BLKSZ(2)) hps_io
 		.sd_buff_dout(sd_buff_dout),
 		.sd_buff_din(sd_buff_din),
 		.sd_buff_wr(sd_buff_wr),
-
-
 	  
-		  .joystick_0(joy1),
-		  .joystick_1(joy2),
+		.joystick_0(joy1),
+		.joystick_1(joy2),
 
-		  .joystick_analog_0(joya1),
-		  .joystick_analog_1(joya2),
+		.joystick_analog_0(joya1),
+		.joystick_analog_1(joya2),
 		  
         .ps2_key(ps2_key),
 
@@ -379,7 +377,8 @@ video_mixer #(.GAMMA(1)) video_mixer
         .*,
 	.freeze_sync(),
 
-        .CLK_VIDEO(clk_vid),
+        .CLK_VIDEO(clk_sys),
+//        .CLK_VIDEO(clk_vid), (SRH)
         .ce_pix(vga_clk),
 
         .scandoubler(  1'b0),
@@ -412,7 +411,7 @@ wire [7:0] b;
 wire easter_egg = ~status[10];
 wire	[31:0]	probe;
 
-assign USER_OUT[5:0] = probe[29:24];
+assign USER_OUT[6:0] = probe[30:24];
 
 coco3fpga_dw coco3 (
 //	CLOCKS
@@ -551,17 +550,17 @@ wire	ram_rd;
 wire	ram_wr;
 wire	[15:0]	ram_ad_buf;
 
-always @(posedge CLK_50M)
+always @(posedge clk_sys)
 begin
 	ram_wr <= ~(ioctl_wr & load_tape);
 	if (ioctl_download)
-		ram_ad_buf <= ioctl_addr;
+		ram_ad_buf <= ioctl_addr[15:0];
 	else
 		ram_ad_buf <= ram_addr;
 end
 
 COCO_SRAM CC3_CAS1(
-.CLK(CLK_50M),
+.CLK(clk_sys),
 .ADDR(ram_ad_buf),
 .R_W(ram_wr),
 .DATA_I(ioctl_data),
@@ -570,19 +569,16 @@ COCO_SRAM CC3_CAS1(
 
 
 cassette cassette(
-  .clk(CLK_50M/*clk_sys*/),
+  .clk(clk_sys),
   .Q(clk_Q_out),
 
   .rewind(status[15]),
   .en(cas_relay),
 
-//  .sdram_addr(sdram_addr),
-//  .sdram_data(sdram_data),
   .sdram_addr(ram_addr),
   .sdram_data(ram_data_o),
   .sdram_rd(ram_rd), // Not connected for sram
 
   .data(casdout)
-//   .status(tape_status)
 );
 endmodule

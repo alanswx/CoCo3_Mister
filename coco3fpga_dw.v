@@ -111,9 +111,6 @@ input				DE1RXD,
 output				OPTTXD,
 input				OPTRXD,
 
-// I2C - Audio
-output				I2C_SCL,
-inout				I2C_DAT,
 
 //Codec - Audio
 output				AUD_XCK,
@@ -129,7 +126,6 @@ output [15:0] SOUND_RIGHT,
 
 // CoCo Joystick
 // Needs removal.... ???
-output				PADDLE_MCLK,
 input	[3:0]		PADDLE_CLK,
 input	[3:0]		P_SWITCH,
 input [15:0] joya1,
@@ -232,13 +228,11 @@ reg		[15:0]	RAM0_DATA_O;
 
 reg		[15:0]	RAM0_DATA_I;
 
-wire			RAM0_CS_N;	// OUT defined later as static '0'
 wire			RAM_CS;						// DATA_IN Mux select
 reg				RAM0_BE0_N;	// OUT
 //reg					RAM0_BE0_N;
 reg				RAM0_BE1_N;	// OUT
 //reg					RAM0_BE1_N;
-wire			RAM0_OE_N;	// OUT	defined later as static '0'
 
 wire			RAM0_BE0;
 wire			RAM0_BE1;
@@ -273,7 +267,6 @@ wire			CLK3_57MHZ;
 //WiFi
 wire 			WF_RXD;
 wire 			WF_TXD;
-wire 			RST;
 
 wire			WF_RTS;
 wire			EF;
@@ -316,9 +309,7 @@ wire			TMR_RST;
 reg				TMR_ENABLE;
 reg		[15:0]	VIDEO_BUFFER;
 reg				GRMODE;
-reg				DESCEN;
 reg				BLINK;
-reg				MONO;
 reg				HLPR;
 reg		[2:0]	LPR;
 reg		[1:0]	LPF;
@@ -343,7 +334,6 @@ wire			BIT3;
 reg				CAS_MTR;
 reg				SOUND_EN;
 wire	[21:0]	VIDEO_ADDRESS;		// 8MB   17:0 for 512kb
-wire			ROM_RW;
 wire			FLASH_CE_S;
 
 wire			ENA_DSK;
@@ -415,7 +405,6 @@ reg		[7:0]	ORCH_RIGHT_EXT;
 reg		[7:0]	ORCH_LEFT_EXT_BUF;
 reg		[7:0]	ORCH_RIGHT_EXT_BUF;
 reg				DACLRCLK;
-reg				ADCLRCLK;
 reg		[5:0]	DAC_STATE;
 wire 			H_FLAG;
 
@@ -442,21 +431,11 @@ wire			RS232_EN;
 wire			RX_CLK2;
 wire	[7:0]	DATA_RS232;
 reg		[2:0]	ROM_BANK;
-reg		[1:0]	BANK_SIZE;
-reg		[6:0]	BANK0;
-reg		[6:0]	BANK1;
-reg		[6:0]	BANK2;
-reg		[6:0]	BANK3;
-reg		[6:0]	BANK4;
-reg		[6:0]	BANK5;
-reg		[6:0]	BANK6;
-reg		[6:0]	BANK7;
 wire			SLOT3_HW;
 wire			UART51_TXD;
 wire			UART51_RXD;
 wire			UART51_RTS;
 wire			UART51_DTR;
-wire			UART50_TXD;
 wire			UART50_RXD;
 wire			UART50_RTS;
 reg		[9:0]	SEC;
@@ -476,10 +455,6 @@ reg		[11:0]	PADDLE_VAL_0;
 reg		[11:0]	PADDLE_VAL_1;
 reg		[11:0]	PADDLE_VAL_2;
 reg		[11:0]	PADDLE_VAL_3;
-reg		[11:0]	PADDLE_LATCH_0;
-reg		[11:0]	PADDLE_LATCH_1;
-reg		[11:0]	PADDLE_LATCH_2;
-reg		[11:0]	PADDLE_LATCH_3;
 reg		[1:0]	PADDLE_STATE_0;
 reg		[1:0]	PADDLE_STATE_1;
 reg		[1:0]	PADDLE_STATE_2;
@@ -502,7 +477,6 @@ reg				JCASE0;
 reg				JCASE1;
 reg				JCASE2;
 reg				JCASE3;
-reg				MOTOR;
 reg				WRT_PREC;
 reg				DENSITY;
 reg				HALT_EN;
@@ -537,11 +511,9 @@ reg		[7:0]	TRACK_REG_W;
 reg		[7:0]	TRACK_EXT_R;
 reg		[7:0]	TRACK_EXT_W;
 reg				NMI_09_EN;
-wire			IRQ_09;
 reg				IRQ_RESET;
 reg				BUSY0;
 reg				BUSY1;
-reg		[7:0]	DRIVE_SEL_EXT;
 wire	[3:0]	HEXX;
 wire			HALT;
 reg				FORCE_NMI_09_BUF0;
@@ -587,7 +559,6 @@ wire			RDFIFO_WRFULL;
 wire			WRFIFO_RDEMPTY;
 wire			WRFIFO_WRFULL;
 reg				BI_IRQ_EN;
-reg				UART1_CLK;
 reg 	[19:0]	MCLOCK;
 reg 	[19:0]	MCLOCK_DELAY;
 wire			I2C_SCL_EN;
@@ -626,19 +597,14 @@ wire			VDAC_EN;
 wire	[15:0]	VDAC_OUT;
 reg				WF_IRQ_EN;
 reg		[5:0]	COM2_CLK;
-reg				WF_CLOCK;
 reg		[1:0]	WF_BAUD;
 wire			COM2_EN;
 wire			WF_WRFIFO_RDREQ;
 wire			WF_RDFIFO_WRREQ;
-wire			WF_RDFIFO_RDREQ;
-wire	[7:0]	WF_RDFIFO_DATA;
-wire			WF_RDFIFO_RDEMPTY;
 wire			WF_RDFIFO_WRFULL;
 wire			WF_WRFIFO_WRREQ;
 wire	[7:0]	WF_WRFIFO_DATA;
 wire			WF_WRFIFO_RDEMPTY;
-wire			WF_WRFIFO_WRFULL;
 wire	[7:0]	DATA_COM2;
 
 //reg				SDRAM_READ;
@@ -747,10 +713,6 @@ reg				TIMER3_IRQ_STAT_N;
 reg				TIMER3_IRQ_INT;
 reg		[7:0]	GPIO_OUT;
 reg		[7:0]	GPIO_DIR;
-reg				SLAVE_RESET;
-reg		[7:0]	SLAVE_ADD_HI;
-reg		[7:0]	SLAVE_ADD_LO;
-wire			SLAVE_WR;
 wire	[7:0]	ROM_DATA;
 wire	[7:0]	CART_DATA;
 wire	[7:0]	fdc_probe;
@@ -814,16 +776,16 @@ assign LEDG[1] =  1'b0;
 assign LEDG[2] =  1'b0;
 assign LEDG[3] =  FLASH_CE_S;
 assign LEDG[4] = (ADDRESS == 16'hFF84);								// SDRAM
-assign LEDG[5] =  WF_RDFIFO_RDREQ;										// WiFi
+assign LEDG[5] =  1'b0;
 assign LEDG[6] = 1'b0;												// SD Card activity
-assign LEDG[7] = !UART50_TXD | !UART50_RXD;
+assign LEDG[7] = !UART50_RXD;
 // SRH DE2-115 Extra Green LED is unused and off
 assign LEDG[8] = 1'b0;
 
-assign LEDR[0] =  DRIVE_SEL_EXT[0] & MOTOR;
-assign LEDR[1] =  DRIVE_SEL_EXT[1] & MOTOR;
-assign LEDR[2] =  DRIVE_SEL_EXT[2] & MOTOR;
-assign LEDR[3] =  DRIVE_SEL_EXT[3] & MOTOR;
+assign LEDR[0] =  1'b0;
+assign LEDR[1] =  1'b0;
+assign LEDR[2] =  1'b0;
+assign LEDR[3] =  1'b0;
 
 assign LEDR[4] = 1'b0; 
 assign LEDR[5] = SWITCH[6];					// SD Card inserted
@@ -852,7 +814,6 @@ begin
 	MCLOCK_DELAY <= MCLOCK;
 end
 
-assign RST = RESET_N;
 
 //SRH DE2-115 extra digits - blank
 
@@ -901,8 +862,6 @@ assign	BLOCK_ADDRESS =	({MMU_EN, MMU_TR, ADDRESS[15:13]} ==  5'b10000)					?	SAM
 							({VEC_PAG_RAM, MMU_EN, MMU_TR, ADDRESS[15:8]} == 11'b01111111110)	?	SAM17:		//011 1111 1110 X	FE00-FEFF Vector page as RAM
 																														{7'b0000111,ADDRESS[15:13]};
 
-assign RAM0_CS_N = 1'b0;																						// Actual RAM CS is always enabled
-assign RAM0_OE_N = 1'b0;
 assign RAM_CS =					(ROM_SEL)										?	1'b0:		// Any slot
 								({RAM, ADDRESS[15:14]} == 3'b010)				?	1'b0:		// ROM (8000-BFFF)
 								({RAM, ADDRESS[15:13]} == 4'b0110)				?	1'b0:		// ROM (C000-DFFF)
@@ -1071,67 +1030,7 @@ assign	SLOT3_HW = ({MPI_SCS, ADDRESS[15:5]} == 13'b1011111111010)	?	1'b1:		// FF
 																								1'b0;
 assign	VDAC_EN = ({RW_N,ADDRESS[15:0]} == 17'H0FF7E)					?	1'b1:		// FF7E
 																								1'b0;
-assign	SLAVE_WR = ({RW_N,ADDRESS[15:0]} == 17'H1FF6F)					?	1'b1:		// FF6F
-																								1'b0;
 
-always @(negedge CLK50MHZ or negedge RESET_N)
-begin
-	if(!RESET_N)
-	begin
-		ROM_BANK <= 3'b000;
-	end
-	else
-	begin
-		if (PH_2)
-		begin
-			if({SLOT3_HW, RW_N} == 2'b10)
-				begin
-				case (ADDRESS[4:0])
-				5'h00:
-				begin
-					ROM_BANK <= DATA_OUT[2:0];
-				end
-				5'h02:
-				begin
-					BANK0 <= DATA_OUT[6:0];
-				end
-				5'h03:
-				begin
-					BANK_SIZE <= DATA_OUT[1:0];
-				end
-				5'h04:
-				begin
-					BANK1 <= DATA_OUT[6:0];
-				end
-				5'h05:
-				begin
-					BANK2 <= DATA_OUT[6:0];
-				end
-				5'h06:
-				begin
-					BANK3 <= DATA_OUT[6:0];
-				end
-				5'h07:
-				begin
-					BANK4 <= DATA_OUT[6:0];
-				end
-				5'h08:
-				begin
-					BANK5 <= DATA_OUT[6:0];
-				end
-				5'h09:
-				begin
-					BANK6 <= DATA_OUT[6:0];
-				end
-				5'h0A:
-				begin
-					BANK7 <= DATA_OUT[6:0];
-				end
-				endcase
-				end
-	    end
-	end
-end
 /*
 $FF40 - This is the bank latch. The same latch that is used by the Super Program Paks to bank 16K of the Pak ROM
 at a time. The initial design simply used 32K banks - this would allow the Super Program Paks to function, but
@@ -1168,7 +1067,6 @@ in any banks in any order, by simply writing the proper data into these latches.
 */
 
 // If W_PROT[1] = 1 then ROM_RW is 0, else ROM_RW = !RW_N
-assign	ROM_RW = !(W_PROT[1] | RW_N);
 
 
 assign	DATA_IN =
@@ -1182,7 +1080,7 @@ assign	DATA_IN =
 														HDD_EN			?	DATA_HDD:
 														RS232_EN		?	DATA_RS232:
 														SLOT3_HW		?	{5'b00000, ROM_BANK}:
-														WF_RDFIFO_RDREQ	?	WF_RDFIFO_DATA:
+//														WF_RDFIFO_RDREQ	?	WF_RDFIFO_DATA:
 //														SPI_EN			?	SPI_DATA:
 // FF00, FF04, FF08, FF0C, FF10, FF14, FF18, FF1C
 ({ADDRESS[15:5], ADDRESS[1:0]} == 13'b1111111100000)	?	DATA_REG1:
@@ -1201,18 +1099,18 @@ assign	DATA_IN =
 // FF23, FF27, FF2B, FF2F, FF33, FF37, FF3B, FF3F
 ({ADDRESS[15:5], ADDRESS[1:0]} == 16'b1111111100111)	?	{!CART1_FIRQ_BUF[1], 3'b011, SOUND_EN, DDR4, CART1_POL, CART1_FIRQ_INT}:
 // HiRes Joystick
-								({PDL,ADDRESS} == 17'h0FF60)	?	PADDLE_LATCH_0[11:4]:
-								({PDL,ADDRESS} == 17'h0FF61)	?	{PADDLE_LATCH_0[3:0],4'b0000}:
-								({PDL,ADDRESS} == 17'h0FF62)	?	PADDLE_LATCH_1[11:4]:
-								({PDL,ADDRESS} == 17'h0FF63)	?	{PADDLE_LATCH_1[3:0],4'b0000}:
-								({PDL,ADDRESS} == 17'h1FF60)	?	PADDLE_LATCH_2[11:4]:
-								({PDL,ADDRESS} == 17'h1FF61)	?	{PADDLE_LATCH_2[3:0],4'b0000}:
-								({PDL,ADDRESS} == 17'h1FF62)	?	PADDLE_LATCH_3[11:4]:
-								({PDL,ADDRESS} == 17'h1FF63)	?	{PADDLE_LATCH_3[3:0],4'b0000}:
-									  (ADDRESS  == 16'hFF6C)	?	{(!WF_RDFIFO_RDEMPTY & WF_IRQ_EN),
-																			5'b00000,
-																			!WF_RDFIFO_RDEMPTY,							// 1 = data available
-																			WF_WRFIFO_WRFULL}:							// 1 = Write FIFO Full
+//								({PDL,ADDRESS} == 17'h0FF60)	?	PADDLE_LATCH_0[11:4]:
+//								({PDL,ADDRESS} == 17'h0FF61)	?	{PADDLE_LATCH_0[3:0],4'b0000}:
+//								({PDL,ADDRESS} == 17'h0FF62)	?	PADDLE_LATCH_1[11:4]:
+//								({PDL,ADDRESS} == 17'h0FF63)	?	{PADDLE_LATCH_1[3:0],4'b0000}:
+//								({PDL,ADDRESS} == 17'h1FF60)	?	PADDLE_LATCH_2[11:4]:
+//								({PDL,ADDRESS} == 17'h1FF61)	?	{PADDLE_LATCH_2[3:0],4'b0000}:
+//								({PDL,ADDRESS} == 17'h1FF62)	?	PADDLE_LATCH_3[11:4]:
+//								({PDL,ADDRESS} == 17'h1FF63)	?	{PADDLE_LATCH_3[3:0],4'b0000}:
+//									  (ADDRESS  == 16'hFF6C)	?	{(!WF_RDFIFO_RDEMPTY & WF_IRQ_EN),
+//																			5'b00000,
+//																			!WF_RDFIFO_RDEMPTY,							// 1 = data available
+//																			WF_WRFIFO_WRFULL}:							// 1 = Write FIFO Full
 
 									(ADDRESS == 16'hFF70)		?	{1'b0, GART_WRITE[22:16]}:		// 2MB
 									(ADDRESS == 16'hFF71)		?	{       GART_WRITE[15:8]}:
@@ -1515,63 +1413,6 @@ begin
 	end
 end
 
-//Switch selectable WiFi baud rate
-// This should go away...
-
-always @(negedge CLK50MHZ or negedge RESET_N)
-begin
-	if(!RESET_N)
-	begin
-		COM3_CLK <= 3'b000;
-		COM3_CLOCK <= 1'b0;
-	end
-	else
-	begin
-//		Formally combinational.
-		if (SWITCH[8:7] == 2'b11)
-			UART1_CLK <= COM1_CLOCK_X;
-		else
-			UART1_CLK <= COM1_CLOCK;
-
-		if (WF_BAUD == 2'b11)
-			WF_CLOCK <= COM1_CLOCK_X;
-		else
-			WF_CLOCK <= COM3_CLOCK;
-
-		if (COM1_CLOCK_X == 1'b0 && COM1_CLOCK_X_D == 1'b1)
-			case (COM3_CLK)
-			3'b000:
-			begin
-				COM3_CLOCK <= 1'b1;
-				COM3_CLK <= 3'b001;
-			end
-			3'b001:
-			begin
-				COM3_CLOCK <= 1'b0;
-				if(WF_BAUD==2'b10)				// divide by 2 460800 = 14.814814815 / 2 / 16 = 462962.963 = 0.469393%
-					COM3_CLK <= 3'b000;
-				else
-					COM3_CLK <= 3'b010;
-			end
-			3'b011:
-			begin
-				COM3_CLOCK <= 1'b0;
-				if(WF_BAUD==2'b01)				// divide by 4 230400
-					COM3_CLK <= 3'b000;
-				else
-					COM3_CLK <= 3'b100;
-			end
-			3'b111:									// divide by 8 115200
-			begin
-				COM3_CLK <= 3'b000;
-			end
-			default:
-			begin
-				COM3_CLK <= COM3_CLK + 1'b1;
-			end
-			endcase
-	end
-end
 
 // Combinatorial clocks :(
 //assign UART1_CLK = (SWITCH[8:7] == 2'b11)	?	COM1_CLOCK_X:	// 921600
@@ -1795,9 +1636,6 @@ cpu09 GLBCPU09(
 // Disk Drive Controller / Slave processor
 // New fdc_v2 goes here  - the include will be removed.
 
-`define NEW_COCO_FDC
-
-`ifdef NEW_COCO_FDC
 
 wire	FF40_ENA;
 wire	FF40_read;
@@ -1854,11 +1692,6 @@ fdc coco_fdc(
 	.probe(fdc_probe)
 );
 
-`else
-`include "CoCo3FPGA_Common\CoCo3IO.v"
-
-`endif
-
 
 
 //***********************************************************************
@@ -1877,14 +1710,14 @@ begin
 			case (MPI_SCS)
 			2'b00:
 				CART_INT_IN_N <=  (!CART_INT_IN_N | SWITCH[4])
-										&(!IRQ_09 & SER_IRQ);
+										&(SER_IRQ);
 			2'b01:
-				CART_INT_IN_N <= (!IRQ_09 & SER_IRQ);
+				CART_INT_IN_N <= (SER_IRQ);
 			2'b10:
 				CART_INT_IN_N <= (!CART_INT_IN_N | SWITCH[4])
-										&(!IRQ_09 & SER_IRQ);
+										&(SER_IRQ);
 			2'b11:
-				CART_INT_IN_N <= (!IRQ_09 & SER_IRQ);
+				CART_INT_IN_N <= (SER_IRQ);
 			endcase
 	end
 end
@@ -2572,10 +2405,8 @@ assign UART51_RXD =	(!SWITCH[9])	?	OPTRXD:						// Switch 9 off
 													DE1RXD;						// Switch 9 on
 assign UART50_RXD =	(!SWITCH[9])	?	DE1RXD:						// Switch 9 off
 													OPTRXD;						// Switch 9 on
-assign DE1TXD =		(!SWITCH[9])	?	UART50_TXD:					// Switch 9 off
-													UART51_TXD;					// Switch 8 on
-assign OPTTXD =		(!SWITCH[9])	?	UART51_TXD:					// Switch 9 off
-													UART50_TXD;					// Switch 8 on
+assign DE1TXD =		UART51_TXD;					
+assign OPTTXD =		1'b0;
 
 // Timer
 assign TMR_CLK = !TIMER_INS	?	(!H_SYNC_N | !H_FLAG):
@@ -2693,10 +2524,6 @@ begin
 // FF6C
 		WF_IRQ_EN <= 1'b0;
 		WF_BAUD <= 2'b00;
-// FF6C=FF6D
-		SLAVE_RESET <= 1'b0;
-		SLAVE_ADD_HI <= 8'h00;
-		SLAVE_ADD_LO <= 8'h00;
 // FF70-FF72
 		GART_WRITE <= 23'h000000;			// 19' for 512kb
 // FF74-FF76
@@ -2766,8 +2593,6 @@ begin
 		TMR_LSB <= 8'h00;
 // FF98
 		GRMODE <= 1'b0;
-		DESCEN <= 1'b0;
-		MONO <= 1'b0;
 		LPR <= 3'b000;
 // FF99
 		HLPR <= 1'b0;
@@ -3398,13 +3223,6 @@ begin
 					WF_IRQ_EN <= DATA_OUT[7];
 					WF_BAUD <= DATA_OUT[1:0];
 				end
-				16'hFF6D:
-					SLAVE_ADD_HI <= DATA_OUT;
-				16'hFF6E:
-				begin
-					SLAVE_RESET <= 1'b1;
-					SLAVE_ADD_LO <= DATA_OUT;
-				end
 				16'hFF70:
 				begin
 					GART_WRITE[22:16] <= DATA_OUT[6:0];	//2MB    512Kb: GART_WRITE[18:16] <= DATA_OUT[2:0];
@@ -3552,8 +3370,6 @@ begin
 				begin
 					GRMODE <= DATA_OUT[7];
 					HRES[3] <= DATA_OUT[6];	// Extended resolutions
-					DESCEN <= DATA_OUT[5];
-					MONO <= DATA_OUT[4];
 					LPR <= DATA_OUT[2:0];
 				end
 				16'hFF99:
