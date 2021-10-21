@@ -421,7 +421,7 @@ wire			SER_IRQ;
 reg		[4:0]	COM1_STATE;
 reg				COM1_CLOCK_X;
 reg				COM1_CLOCK_X_D;
-reg				COM1_CLOCK;
+//reg				COM1_CLOCK;
 reg		[2:0]	COM1_CLK;
 reg		[2:0]	COM2_STATE;
 reg				COM3_CLOCK;
@@ -472,7 +472,6 @@ wire			JOY1;
 wire			JOY2;
 wire			JOY3;
 wire			JOY4;
-reg				PDL;
 reg				JCASE0;
 reg				JCASE1;
 reg				JCASE2;
@@ -595,9 +594,7 @@ wire			BI_TO_RST;
 reg				ANALOG;
 wire			VDAC_EN;
 wire	[15:0]	VDAC_OUT;
-reg				WF_IRQ_EN;
 reg		[5:0]	COM2_CLK;
-reg		[1:0]	WF_BAUD;
 wire			COM2_EN;
 wire			WF_WRFIFO_RDREQ;
 wire			WF_RDFIFO_WRREQ;
@@ -724,6 +721,8 @@ assign PROBE[15:8] = LEDR[7:0];
 assign PROBE[23:16] = LEDG[7:0];
 //assign PROBE[31:24] = {3'b000, DATA_OUT[3], MOTOR, DRIVE_SEL_EXT[0], HDD_EN, ADDRESS[0]};
 assign PROBE[31:24] = {2'b00, fdc_probe[5:0]};
+
+assign ROM_BANK = 3'b000;
 
 // SRH MISTer
 //
@@ -1372,7 +1371,7 @@ begin
 	if(!RESET_N)
 	begin
 		COM1_CLK <= 3'b000;
-		COM1_CLOCK <= 1'b0;
+//		COM1_CLOCK <= 1'b0;
 	end
 	else
 	begin
@@ -1381,12 +1380,12 @@ begin
 			case (COM1_CLK)
 			3'b000:
 			begin
-				COM1_CLOCK <= 1'b1;
+//				COM1_CLOCK <= 1'b1;
 				COM1_CLK <= 3'b001;
 			end
 			3'b001:
 			begin
-				COM1_CLOCK <= 1'b0;
+//				COM1_CLOCK <= 1'b0;
 				if(SWITCH[8:7]==2'b10)				// divide by 2 460800 = 14.814814815 / 2 / 16 = 462962.963 = 0.469393%
 					COM1_CLK <= 3'b000;
 				else
@@ -1394,7 +1393,7 @@ begin
 			end
 			3'b011:
 			begin
-				COM1_CLOCK <= 1'b0;
+//				COM1_CLOCK <= 1'b0;
 				if(SWITCH[8:7]==2'b01)				// divide by 4 230400
 					COM1_CLK <= 3'b000;
 				else
@@ -2519,11 +2518,6 @@ begin
 		CART1_POL <= 1'b0;
 		DDR4 <= 1'b0;
 		SOUND_EN <= 1'b0;
-// FF60
-		PDL <= 1'b0;
-// FF6C
-		WF_IRQ_EN <= 1'b0;
-		WF_BAUD <= 2'b00;
 // FF70-FF72
 		GART_WRITE <= 23'h000000;			// 19' for 512kb
 // FF74-FF76
@@ -3213,15 +3207,6 @@ begin
 					CART1_POL <= DATA_OUT[1];
 					DDR4 <= DATA_OUT[2];
 					SOUND_EN <= DATA_OUT[3];
-				end
-				16'hFF60:
-				begin
-					PDL <= DATA_OUT[0];
-				end
-				16'hFF6C:
-				begin
-					WF_IRQ_EN <= DATA_OUT[7];
-					WF_BAUD <= DATA_OUT[1:0];
 				end
 				16'hFF70:
 				begin

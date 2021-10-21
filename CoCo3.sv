@@ -244,7 +244,7 @@ wire CLK_114, CLK_57, CLK_28, CLK_14;
 //        .locked(pll_locked)
 //);
 
-pll2 Master_CoCo3_CLKS
+pll pll
 (
         .refclk(CLK_50M),
         .rst(0),
