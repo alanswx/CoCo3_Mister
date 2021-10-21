@@ -76,6 +76,13 @@
 
 module coco3fpga_dw(
 // Input Clocks
+//	CLOCKS
+
+input				CLK_114,
+input				CLK_57,
+input				CLK_28,
+input				CLK_14,
+
 input				CLK50MHZ,
 
 input 				COCO_RESET_N,
@@ -159,13 +166,34 @@ input        		sd_buff_wr,
 //	GPIO
 inout	[7:0]		GPIO,
 
+//  Misc
 input				EE_N,
 output	[31:0]		PROBE,
 
-output clk_Q_out,
-output cas_relay,
-input casdout 
+//  Cassette
+output				clk_Q_out,
+output				cas_relay,
+input				casdout,
+
+//	SDRAM
+
+output	[24:0]		sdram_addr,
+input	[31:0]		sdram_ldout,
+input	[15:0]		sdram_dout,
+output	[7:0]		sdram_din,
+output				sdram_req,
+output				sdram_rnw,
+input				sdram_ready
+ 
 );
+
+
+// temp drive sdram outputs
+
+assign sdram_addr = 25'b0000000000000000000000000;
+assign sdram_din = 8'b00000000;
+assign sdram_req = 1'b0;
+assign sdram_rnw = 1'b1;
 
 assign clk_Q_out = PH_2;
 assign cas_relay = CAS_MTR;
