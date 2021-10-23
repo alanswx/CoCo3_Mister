@@ -61,6 +61,7 @@
 //	3.0.1.0		Update to fix 32/40 CoCO3 Text issue and add 2 Meg max memory
 //	4.1.2.X		Fixed 6502 code for drivewire, removed timer, fixed 6551 baud 
 //				rate (& DE2-115 compiler symbol)
+//	5.x			15Khz video updated from GIME-X, clocking changes, SDRAM intigration
 ////////////////////////////////////////////////////////////////////////////////
 // Gary Becker
 // gary_L_becker@yahoo.com
@@ -715,6 +716,9 @@ wire	[7:0]	CART_DATA;
 wire	[7:0]	fdc_probe;
 wire			clk_sys;
 
+reg 			hold;
+reg 			cpu_ena;
+
 // Probe's defined
 //assign PROBE[6:0] = {CART1_POL, CART1_BUF_RESET_N, CART1_FIRQ_STAT_N, CART1_CLK_N, CART1_FIRQ_N, RESET_N, PH_2};
 assign PROBE[7:0] = {1'b0, CART1_POL, CART1_FIRQ_N, CART1_FIRQ_BUF[0], CART1_CLK_N_D, CART1_FIRQ_RESET_N, CART1_CLK_N, PH_2};
@@ -1072,8 +1076,10 @@ in any banks in any order, by simply writing the proper data into these latches.
 
 
 assign	DATA_IN =
-														RAM0_BE0		?	RAM0_DATA_O[7:0]:
-														RAM0_BE1		?	RAM0_DATA_O[15:8]:
+														(RAM0_BE0_L & end_hold)		?	hold_data[7:0]:
+														(RAM0_BE1_L & end_hold)		?	hold_data[15:8]:
+//														RAM0_BE0		?	RAM0_DATA_O[7:0]:
+//														RAM0_BE1		?	RAM0_DATA_O[15:8]:
 //														RAM1_BE0		?	RAM1_DATA[7:0]:
 //														RAM1_BE1		?	RAM1_DATA[15:8]:
 //														RAM1_BE2		?	RAM1_DATA[7:0]:
@@ -1133,7 +1139,8 @@ assign	DATA_IN =
 //									(ADDRESS == 16'hFF87)		?	{1'b0, SDRAM_ADDR[21:15]}:
 //									(ADDRESS == 16'hFF88)		?	SDRAM_ADDR[14:7]:
 
-									(ADDRESS == 16'hFF8E)		?	GPIO_DIR:
+									(ADDRESS == 16'hFF8E)		?	{RAM0_BE0_L, RAM0_BE1_L, hold, cpu_ena, end_hold, 3'b000}: // to be fixed (SRH)
+//									(ADDRESS == 16'hFF8E)		?	GPIO_DIR:
 									(ADDRESS == 16'hFF8F)		?	GPIO:
 
 									(ADDRESS == 16'hFF90)		?	{COCO1, MMU_EN, GIME_IRQ, GIME_FIRQ, VEC_PAG_RAM, ST_SCS, ROM}:
@@ -1450,6 +1457,12 @@ begin
 	end
 end
 
+reg		[1:0]	hold_cnt;
+reg				end_hold;
+reg		[15:0]	hold_data;
+reg				RAM0_BE0_L, RAM0_BE1_L;
+
+
 //BANKS
 // CPU clock / SRAM Signals for old SRAM
 always @(negedge clk_sys or negedge RESET_N)
@@ -1462,19 +1475,57 @@ begin
 		RAM0_RW_N <= 1'b1;
 		RAM0_BE0_N <=  1'b1;
 		RAM0_BE1_N <= 1'b1;
+		hold <= 1'b0;
+		cpu_ena <= 1'b0;
+		hold_cnt <= 2'b00;
+		end_hold <= 1'b0;
+		RAM0_BE0_L <= 1'b0;
+		RAM0_BE1_L <= 1'b0;
 	end
 	else
 	begin
+
+//		If we are in hold run counter till hold states are done.
+		if (hold)
+		begin
+			hold_cnt <= hold_cnt + 1'b1;
+			if (hold_cnt == 2'b10)
+			begin
+//				Hold states are done - kill hold and set end hold to drive data
+				hold <= 1'b0;
+				end_hold <= 1'b1;
+				hold_cnt <= 1'b00;
+			end
+		end
+
+		if (end_hold)
+		begin
+//			kill end hold and cpu_ena for the read memory hold 
+			end_hold <= 1'b0;
+			cpu_ena <= 1'b0;
+		end
+
 		case (CLK)
 		6'h00:
 		begin
 			SWITCH_L <= {SWITCH[0], RATE};					// Normal speed
-			PH_2_RAW <= 1'b1;
-// Grab video one more time
+// 			Grab video one more time
 			VIDEO_BUFFER <= RAM0_DATA_O;
 			CLK <= 6'h01;
+			PH_2_RAW <= 1'b1;
 			RAM0_BE0_N <=  !RAM0_BE0;
 			RAM0_BE1_N <=  !RAM0_BE1;
+
+			cpu_ena <= 1'b1;
+			if (VMA & RAM_CS & RW_N)
+			begin
+//				read memory cycle
+//				start hold and get which byte
+				hold <= 1'b1;
+				RAM0_BE0_L <=  RAM0_BE0;
+				RAM0_BE1_L <=  RAM0_BE1;
+			end
+
 //***************************************
 // Gart
 //***************************************
@@ -1528,6 +1579,14 @@ begin
 				GART_BUF <= DATA_IN;
 			end
 			PH_2_RAW <= 1'b0;
+
+//			if we are not in a memory read [hold] then terminate cpu_ena - just like PH_2
+			if (!hold)
+				cpu_ena <= 1'b0;
+
+//			Grab sram data to supply after the read hold delay
+			hold_data <= RAM0_DATA_O;
+				
 			RAM0_ADDRESS <= VIDEO_ADDRESS[19:0];
 			RAM0_BE0_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
 			RAM0_BE1_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
@@ -1537,7 +1596,8 @@ begin
 			else
 				CLK <= 6'h02;
 		end
-		6'h1B:								//	50/28 = 1.7857
+		6'h1F:								//	64/32 = 1.7857
+//		6'h1B:								//	50/28 = 1.7857
 //		6'h17:								//	50/24 = 2.0833
 		begin
 			RAM0_ADDRESS <= VIDEO_ADDRESS[19:0];
@@ -1548,20 +1608,20 @@ begin
 			if(SWITCH_L[0])				//Rate = 1?
 				CLK <= 6'h00;
 			else
-				CLK <= 6'h1C;
+				CLK <= 6'h20;
 		end
-		6'h37:								// 50/56 = 0.89286
-		begin
-			RAM0_ADDRESS <= VIDEO_ADDRESS[19:0];
-			RAM0_BE0_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
-			RAM0_BE1_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
-			VIDEO_BUFFER <= RAM0_DATA_O;
-			CLK <= 6'h00;
-		end
-		6'h3F:								// Just in case
-		begin
-			CLK <= 6'h00;
-		end
+//		6'h37:								// 50/56 = 0.89286
+//		begin
+//			RAM0_ADDRESS <= VIDEO_ADDRESS[19:0];
+//			RAM0_BE0_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
+//			RAM0_BE1_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
+//			VIDEO_BUFFER <= RAM0_DATA_O;
+//			CLK <= 6'h00;
+//		end
+//		6'h3F:								// Just in case
+//		begin
+//			CLK <= 6'h00;
+//		end
 		default:
 		begin
 			CLK <= CLK + 1'b1;
@@ -1619,7 +1679,8 @@ end
 // CPU section copyrighted by John Kent
 cpu09 GLBCPU09(
 	.clk(clk_sys),
-	.ce(PH_2),
+//	.ce(PH_2),
+	.ce(cpu_ena),
 	.rst(CPU_RESET),
 	.vma(VMA),
 	.addr(ADDRESS),
@@ -1627,9 +1688,8 @@ cpu09 GLBCPU09(
 	.data_in(DATA_IN),
 	.data_out(DATA_OUT),
 	.halt(HALT),
-//	.halt(HALT_BUF2),
-//	.halt(1'b0/*HALT_BUF2*/),
-	.hold(1'b0),
+//	.hold(1'b0),
+	.hold(hold),
 	.irq(!CPU_IRQ_N),
 	.firq(!CPU_FIRQ_N),
 	.nmi(NMI_09)
