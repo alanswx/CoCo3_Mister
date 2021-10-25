@@ -194,6 +194,7 @@ localparam  CONF_STR = {
         "COCO3;;",
 		  "-;",
 		  "F0,BIN,Load COCO ROMs (CB / ECB / DCB / Orch90);",
+		  "F3,BIN,Load COCO Font;",
 		  "-;",
 		  "S0,DSK,Load Disk Drive 0;",
 		  "S1,DSK,Load Disk Drive 1;",

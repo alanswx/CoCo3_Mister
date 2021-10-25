@@ -96,7 +96,9 @@ SCRN_START_HSB,		// 4 extra bits for 8MB screen start
 SCRN_START_MSB,
 SCRN_START_LSB,
 BLINK,
-SWITCH5
+SWITCH5,
+ROM_ADDRESS,
+ROM_DATA1
 );
 
 input					PIX_CLK;
@@ -160,9 +162,9 @@ wire		[7:0]		CHARACTER4;
 reg					UNDERLINE;
 wire					MODE_256;
 
-reg		[10:0]	ROM_ADDRESS;
+output reg	[10:0]	ROM_ADDRESS;
 wire		[21:0]	RAM_ADDRESS_X;		// 17:0 512kb
-wire		[7:0]		ROM_DATA1;
+input		[7:0]	ROM_DATA1;
 wire		[3:0]		LINES_ROW;
 reg		[3:0]		NUM_ROW;
 wire					SIX;
@@ -244,11 +246,11 @@ parameter PALETTEE = 4'hE;
 parameter PALETTEF = 4'hF;
 
 // Character generator
-COCO3GEN coco3gen(
-.address(ROM_ADDRESS[10:0]),
-.clock(PIX_CLK),
-.q(ROM_DATA1)
-);
+//COCO3GEN coco3gen(
+//.address(ROM_ADDRESS[10:0]),
+//.clock(PIX_CLK),
+//.q(ROM_DATA1)
+//);
 
 /*****************************************************************************
 * Read RAM

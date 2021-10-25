@@ -1634,11 +1634,13 @@ begin
 	end
 end
 
+assign PH_2 = PH_2_RAW;
+
 // Make sure PH2 is a Global Clock
-PH2_CLK	PH2_CLK_inst (
-	.inclk ( PH_2_RAW ),
-	.outclk ( PH_2 )
-	);
+//PH2_CLK	PH2_CLK_inst (
+//	.inclk ( PH_2_RAW ),
+//	.outclk ( PH_2 )
+//	);
 
 
 assign RESET_P =	!BUTTON_N[3]					// Button
@@ -1694,9 +1696,6 @@ cpu09 GLBCPU09(
 	.firq(!CPU_FIRQ_N),
 	.nmi(NMI_09)
 );
-
-// Disk Drive Controller / Slave processor
-// New fdc_v2 goes here  - the include will be removed.
 
 
 wire	FF40_ENA;
@@ -4071,6 +4070,9 @@ VDAC	VDAC_inst (
 	.q ( VDAC_OUT )
 	);
 
+wire	[10:0]	font_adrs;
+wire	[7:0]	font_data;
+
 // Video timing and modes
 COCO3VIDEO COCOVID(
 	.PIX_CLK(MCLOCK[0]),		//25 MHz = 40 nS
@@ -4101,7 +4103,20 @@ COCO3VIDEO COCOVID(
 	.HRES(HRES),
 	.CRES(CRES),
 	.BLINK(BLINK),
-	.SWITCH5(SWITCH[5])
+	.SWITCH5(SWITCH[5]),
+	.ROM_ADDRESS(font_adrs),
+	.ROM_DATA1(font_data)
+);
+
+// COCO3 Character rom
+
+coco3_Char_ROM coco3_Char_ROM(
+	.CLK(clk_sys),
+	.ADDR_R(font_adrs),
+	.ADDR_W(ioctl_addr[10:0]),
+	.WE((ioctl_index[5:0] == 6'd3) & ioctl_wr),
+    .DATA_R(font_data),
+    .DATA_W(ioctl_data[7:0])
 );
 
 // RS232PAK UART
