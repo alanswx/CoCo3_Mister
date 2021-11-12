@@ -97,10 +97,12 @@ SCRN_START_MSB,
 SCRN_START_LSB,
 BLINK,
 SWITCH5,
+HBORDER,
 ROM_ADDRESS,
 ROM_DATA1
 );
 
+output reg				HBORDER;
 input					PIX_CLK;
 input					RESET_N;
 output		[9:0]		COLOR;
@@ -222,7 +224,7 @@ wire		[9:0]		ROW_OFFSET_Z0;
 reg		[6:0]		HOR_OFFSET_BUF;
 wire		[22:0]	SCREEN_OFF;	// 18:0 for 512kb
 reg					VBORDER;
-reg					HBORDER;
+//reg					HBORDER;
 wire		[9:0]		BORDER;
 wire		[9:0]		CCOLOR;
 wire					MODE6;

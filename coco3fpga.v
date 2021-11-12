@@ -75,7 +75,7 @@
 
 
 
-module coco3fpga_dw(
+module coco3fpga(
 // Input Clocks
 //	CLOCKS
 
@@ -174,23 +174,26 @@ input				casdout,
 
 //	SDRAM
 
-output	[24:0]		sdram_addr,
-input	[31:0]		sdram_ldout,
+output	[24:0]		sdram_cpu_addr,
+//input	[31:0]		sdram_ldout,
 input	[15:0]		sdram_dout,
-output	[7:0]		sdram_din,
-output				sdram_req,
-output				sdram_rnw,
-input				sdram_ready
+output	[7:0]		sdram_cpu_din,
+output				sdram_cpu_req,
+output				sdram_cpu_rnw,
+input				sdram_cpu_ack,
+input				sdram_cpu_ready,
+
+output	[24:0]		sdram_vid_addr,
+output				sdram_vid_req,
+input				sdram_vid_ack,
+input				sdram_vid_ready,
+
+input				sdram_busy
+
  
 );
 
 
-// temp drive sdram outputs
-
-assign sdram_addr = 25'b0000000000000000000000000;
-assign sdram_din = 8'b00000000;
-assign sdram_req = 1'b0;
-assign sdram_rnw = 1'b1;
 
 assign clk_Q_out = PH_2;
 assign cas_relay = CAS_MTR;
@@ -502,7 +505,7 @@ wire	[7:0]	CPU_BANK;
 wire	[7:0]	DATA_OUT_02;
 wire	[7:0]	DATA_IN_02;
 wire	[7:0]	DATA_COM1;
-reg		[8:0]	BUFF_ADD;
+//reg		[8:0]	BUFF_ADD;
 reg				ADDR_RESET_N;
 reg				IMM_HALT_09;
 wire			COM1_EN;
@@ -1078,8 +1081,8 @@ in any banks in any order, by simply writing the proper data into these latches.
 assign	DATA_IN =
 														(RAM0_BE0_L & end_hold)		?	hold_data[7:0]:
 														(RAM0_BE1_L & end_hold)		?	hold_data[15:8]:
-//														RAM0_BE0		?	RAM0_DATA_O[7:0]:
-//														RAM0_BE1		?	RAM0_DATA_O[15:8]:
+														RAM0_BE0		?	RAM0_DATA_O[7:0]:
+														RAM0_BE1		?	RAM0_DATA_O[15:8]:
 //														RAM1_BE0		?	RAM1_DATA[7:0]:
 //														RAM1_BE1		?	RAM1_DATA[15:8]:
 //														RAM1_BE2		?	RAM1_DATA[7:0]:
@@ -1138,6 +1141,8 @@ assign	DATA_IN =
 //									(ADDRESS == 16'hFF86)		?	SDRAM_DOUT[15:8]:
 //									(ADDRESS == 16'hFF87)		?	{1'b0, SDRAM_ADDR[21:15]}:
 //									(ADDRESS == 16'hFF88)		?	SDRAM_ADDR[14:7]:
+									(ADDRESS == 16'hFF87)		?	BUFF_DATA[15:8]:
+									(ADDRESS == 16'hFF88)		?	BUFF_DATA[7:0]:
 
 									(ADDRESS == 16'hFF8E)		?	{RAM0_BE0_L, RAM0_BE1_L, hold, cpu_ena, end_hold, 3'b000}: // to be fixed (SRH)
 //									(ADDRESS == 16'hFF8E)		?	GPIO_DIR:
@@ -1457,11 +1462,27 @@ begin
 	end
 end
 
-reg		[1:0]	hold_cnt;
 reg				end_hold;
 reg		[15:0]	hold_data;
 reg				RAM0_BE0_L, RAM0_BE1_L;
+reg				clear_data_ready, data_ready;
 
+always @(negedge CLK_114 or posedge clear_data_ready)
+begin
+	if (clear_data_ready)
+		data_ready <= 1'b0;
+	else
+	begin
+		if (sdram_cpu_ready)
+		begin
+			hold_data <= sdram_dout;
+			data_ready <= 1'b1;
+		end	
+	end
+end
+
+assign sdram_cpu_addr = {20'b00000000000000000000, ADDRESS[3:0]};
+assign sdram_cpu_din = DATA_OUT;
 
 //BANKS
 // CPU clock / SRAM Signals for old SRAM
@@ -1477,24 +1498,27 @@ begin
 		RAM0_BE1_N <= 1'b1;
 		hold <= 1'b0;
 		cpu_ena <= 1'b0;
-		hold_cnt <= 2'b00;
 		end_hold <= 1'b0;
 		RAM0_BE0_L <= 1'b0;
 		RAM0_BE1_L <= 1'b0;
+		clear_data_ready <= 1'b1;
+		sdram_cpu_req <= 1'b0;
+		sdram_cpu_rnw <= 1'b1;
 	end
 	else
 	begin
+		clear_data_ready <= 1'b0;
 
-//		If we are in hold run counter till hold states are done.
+//		If we are in hold re done.
 		if (hold)
 		begin
-			hold_cnt <= hold_cnt + 1'b1;
-			if (hold_cnt == 2'b10)
+			if (data_ready)
 			begin
 //				Hold states are done - kill hold and set end hold to drive data
 				hold <= 1'b0;
 				end_hold <= 1'b1;
-				hold_cnt <= 1'b00;
+				clear_data_ready <= 1'b1;
+//				hold_cnt <= 1'b00;
 			end
 		end
 
@@ -1504,6 +1528,9 @@ begin
 			end_hold <= 1'b0;
 			cpu_ena <= 1'b0;
 		end
+
+		if (sdram_cpu_ack)
+			sdram_cpu_req <= 1'b0;
 
 		case (CLK)
 		6'h00:
@@ -1517,13 +1544,16 @@ begin
 			RAM0_BE1_N <=  !RAM0_BE1;
 
 			cpu_ena <= 1'b1;
-			if (VMA & RAM_CS & RW_N)
+			if (VMA & (ADDRESS[15:4]==12'hffe))
 			begin
-//				read memory cycle
+//				sdram memory cycle
 //				start hold and get which byte
 				hold <= 1'b1;
-				RAM0_BE0_L <=  RAM0_BE0;
-				RAM0_BE1_L <=  RAM0_BE1;
+				RAM0_BE0_L <=  !ADDRESS[0];
+				RAM0_BE1_L <=  ADDRESS[0];
+
+				sdram_cpu_req <= 1'b1;
+				sdram_cpu_rnw <= RW_N;
 			end
 
 //***************************************
@@ -1585,7 +1615,7 @@ begin
 				cpu_ena <= 1'b0;
 
 //			Grab sram data to supply after the read hold delay
-			hold_data <= RAM0_DATA_O;
+//			hold_data <= RAM0_DATA_O;
 				
 			RAM0_ADDRESS <= VIDEO_ADDRESS[19:0];
 			RAM0_BE0_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
@@ -1636,11 +1666,6 @@ end
 
 assign PH_2 = PH_2_RAW;
 
-// Make sure PH2 is a Global Clock
-//PH2_CLK	PH2_CLK_inst (
-//	.inclk ( PH_2_RAW ),
-//	.outclk ( PH_2 )
-//	);
 
 
 assign RESET_P =	!BUTTON_N[3]					// Button
@@ -1681,7 +1706,6 @@ end
 // CPU section copyrighted by John Kent
 cpu09 GLBCPU09(
 	.clk(clk_sys),
-//	.ce(PH_2),
 	.ce(cpu_ena),
 	.rst(CPU_RESET),
 	.vma(VMA),
@@ -1690,14 +1714,64 @@ cpu09 GLBCPU09(
 	.data_in(DATA_IN),
 	.data_out(DATA_OUT),
 	.halt(HALT),
-//	.hold(1'b0),
 	.hold(hold),
 	.irq(!CPU_IRQ_N),
 	.firq(!CPU_FIRQ_N),
 	.nmi(NMI_09)
 );
 
+wire	[8:0]		BUFF_ADD_W;		
+wire	[8:0]		BUFF_ADD;
+wire	[15:0]		BUFF_DATA_O;
+wire	[15:0]		BUFF_DATA;
+wire				BUFFER_WRITE;
 
+
+coco_mem_fetch video_fetch(
+	.fast_clk(CLK_114),
+	.RESET_N(RESET_N),
+
+//	Memory Controller I/O
+	.SDRAM_VID_REQ(sdram_vid_req),
+	.SDRAM_VID_ADDR(sdram_vid_addr),
+	.SDRAM_VID_ACK(sdram_vid_ack),
+	.SDRAM_VID_READY(sdram_vid_ready),
+	.SDRAM_DOUT(sdram_dout),
+	
+// RAM / Buffer
+	.BUFF_ADD(BUFF_ADD_W), 		// 512x16 ram buffer
+	.BUFF_DATA_O(BUFF_DATA_O),
+	.BUFFER_WRITE(BUFFER_WRITE),
+	
+//	Video Controller Inputs for physical address computation
+	.RAM_ADDRESS(VIDEO_ADDRESS),
+	.HBORDER(HBORDER),
+	.HOR_OFFSET(HOR_OFFSET),
+	.COCO1(COCO1),
+	.HRES(HRES)
+);
+
+
+
+COCO_VID_RAM_BUF VIDEO_BUFF (
+	.CLK(CLK_114),
+	.ADDR_I(BUFF_ADD_W),
+	.ADDR_O(BUFF_ADD),
+	.WE(BUFFER_WRITE),
+	.DATA_I(BUFF_DATA_O),
+	.DATA_O(BUFF_DATA)
+);
+
+// Test cases...
+// CPU accessable sdram is at FFE0-FFEF [16 bytes]
+// for these addresses - the sdram controller will handle cpu accesses - Read and Write [ready]
+// A simple controller using FF8E (GPIO_DIR) for the memory address and FF88 FF87 for the read. [ready]
+
+assign BUFF_ADD = {1'b0, GPIO_DIR };
+
+
+//		Disk I/O
+//=====================================================================================
 wire	FF40_ENA;
 wire	FF40_read;
 wire	wd1793_data_read;
@@ -4073,6 +4147,8 @@ VDAC	VDAC_inst (
 wire	[10:0]	font_adrs;
 wire	[7:0]	font_data;
 
+wire HBORDER;
+
 // Video timing and modes
 COCO3VIDEO COCOVID(
 	.PIX_CLK(MCLOCK[0]),		//25 MHz = 40 nS
@@ -4104,6 +4180,7 @@ COCO3VIDEO COCOVID(
 	.CRES(CRES),
 	.BLINK(BLINK),
 	.SWITCH5(SWITCH[5]),
+	.HBORDER(HBORDER),
 	.ROM_ADDRESS(font_adrs),
 	.ROM_DATA1(font_data)
 );

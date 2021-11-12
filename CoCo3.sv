@@ -414,7 +414,7 @@ wire	[31:0]	probe;
 
 assign USER_OUT[6:0] = probe[30:24];
 
-coco3fpga_dw coco3 (
+coco3fpga coco3 (
 //	CLOCKS
 
 .CLK_114(CLK_114),
@@ -491,13 +491,21 @@ coco3fpga_dw coco3 (
 
 //	SDRAM
 
-  .sdram_addr(sdram_addr),
-  .sdram_ldout(sdram_ldout),
+  .sdram_cpu_addr(sdram_cpu_addr),
+//  .sdram_ldout(sdram_ldout),
   .sdram_dout(sdram_dout),
-  .sdram_din(sdram_din),
-  .sdram_req(sdram_req),
-  .sdram_rnw(sdram_rnw),
-  .sdram_ready(sdram_ready)
+  .sdram_cpu_din(sdram_cpu_din),
+  .sdram_cpu_req(sdram_cpu_req),
+  .sdram_cpu_rnw(sdram_cpu_rnw),
+  .sdram_cpu_ack(sdram_cpu_ack),
+  .sdram_cpu_ready(sdram_cpu_ready),
+
+  .sdram_vid_addr(sdram_vid_addr[24:0]),
+  .sdram_vid_req(sdram_vid_req),
+  .sdram_vid_ack(sdram_vid_ack),
+  .sdram_vid_ready(sdram_vid_ready),
+  
+  .sdram_busy(sdram_busy)
 
 );
 
@@ -520,25 +528,38 @@ wire reset = RESET | status[0] | buttons[1];
 
 wire clk_Q_out;
 
-wire [24:0] sdram_addr;
-wire [31:0]	sdram_ldout;
+wire [24:0] sdram_cpu_addr;
+//wire [31:0]	sdram_ldout;
 wire [15:0]	sdram_dout;
-wire [7:0] sdram_din;
-wire sdram_req, sdram_rnw;
-wire sdram_ready;
+wire [7:0] sdram_cpu_din;
+wire sdram_cpu_req, sdram_cpu_rnw;
+wire sdram_cpu_ack, sdram_vid_ack;
+wire sdram_cpu_ready;
+
+wire [24:0] sdram_vid_addr;
+wire sdram_vid_req;
+wire sdram_vid_ready;
+wire sdram_busy;
 
 sdram_32r8w coco3_sdram
 (
 	.*,
 	.init(reset),
 	.clk(CLK_114),
-	.sdram_addr(sdram_addr[24:0]),
-	.sdram_ldout(sdram_ldout),
+	.sdram_cpu_addr(sdram_cpu_addr[24:0]),
+//	.sdram_ldout(sdram_ldout),
 	.sdram_dout(sdram_dout),
-	.sdram_din(sdram_din),
-	.sdram_req(sdram_req),
-	.sdram_rnw(sdram_rnw),
-	.sdram_ready(sdram_ready)
+	.sdram_cpu_din(sdram_cpu_din),
+	.sdram_cpu_req(sdram_cpu_req),
+	.sdram_cpu_rnw(sdram_cpu_rnw),
+	.sdram_cpu_ack(sdram_cpu_ack),
+	.sdram_cpu_ready(sdram_cpu_ready),
+	
+	.sdram_vid_addr(sdram_vid_addr[24:0]),
+	.sdram_vid_req(sdram_vid_req),
+	.sdram_vid_ack(sdram_vid_ack),
+	.sdram_vid_ready(sdram_vid_ready),
+	.sdram_busy(sdram_busy)
 );
 
 wire casdout;

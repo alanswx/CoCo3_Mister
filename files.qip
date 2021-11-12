@@ -13,7 +13,7 @@ set_global_assignment -name VERILOG_FILE CoCo3FPGA_Common/UART_6551/uart_6551.v
 set_global_assignment -name VERILOG_FILE CoCo3FPGA_Common/UART_6551/6551tx.v
 set_global_assignment -name VERILOG_FILE CoCo3FPGA_Common/UART_6551/6551rx.v
 set_global_assignment -name VHDL_FILE CoCo3FPGA_Common/CPU09/cpu09l_128a.vhd
-set_global_assignment -name VERILOG_FILE coco3fpga_dw.v
+set_global_assignment -name VERILOG_FILE coco3fpga.v
 set_global_assignment -name QIP_FILE CoCo3FPGA_Common/PH2_CLK.qip
 set_global_assignment -name VERILOG_FILE rtl/pll.v
 set_global_assignment -name VERILOG_FILE rtl/pll/pll_0002.v
@@ -23,3 +23,5 @@ set_global_assignment -name VERILOG_FILE rtl/fdc.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/sdram/sdram2.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/wd1793.sv
 set_global_assignment -name SYSTEMVERILOG_FILE CoCo3.sv
+set_global_assignment -name VHDL_FILE CoCo3FPGA_Common/sram/coco_vid_ram_buf.vhd
+set_global_assignment -name VERILOG_FILE rtl/coco_mem_fetch.v
