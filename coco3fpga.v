@@ -1467,7 +1467,7 @@ reg		[15:0]	hold_data;
 reg				RAM0_BE0_L, RAM0_BE1_L;
 reg				clear_data_ready, data_ready;
 
-always @(negedge CLK_114 or posedge clear_data_ready)
+always @(posedge CLK_114 or posedge clear_data_ready)
 begin
 	if (clear_data_ready)
 		data_ready <= 1'b0;

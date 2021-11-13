@@ -123,7 +123,11 @@ always @(posedge clk) begin
 	reg [31:0] saved_data;
 	reg  [4:0] state = STATE_STARTUP;
 
-	refresh_count <= refresh_count+1'b1;
+	refresh_count <= refresh_count + 1'b1;
+
+	data_vid_ready_delay[CAS_LATENCY+BURST_LENGTH] <= 0;
+
+	data_cpu_ready_delay[CAS_LATENCY+BURST_LENGTH] <= 0;
 
 	data_cpu_ready_delay <= data_cpu_ready_delay>>1;
 	data_vid_ready_delay <= data_vid_ready_delay>>1;
@@ -133,6 +137,9 @@ always @(posedge clk) begin
 //	if(data_ready_delay[1]) sdram_ldout[15:00] <= dq_reg;
 //	if(data_ready_delay[0]) sdram_ldout[31:16] <= dq_reg;
 
+	sdram_cpu_ready <= 1'b0;
+	sdram_vid_ready <= 1'b0;
+	
 	if (data_cpu_ready_delay[2]) sdram_cpu_ready <= 1'b1; // Data valid for the first 16 bits
 	if (data_cpu_ready_delay[1]) sdram_busy <= 1'b0; 
 
@@ -182,8 +189,6 @@ always @(posedge clk) begin
 
 			if (!refresh_count) begin
 				state   <= STATE_IDLE;
-				sdram_cpu_ready <= 1'b1; 
-				sdram_vid_ready <= 1'b1; 
 				sdram_busy <= 1'b0;
 				refresh_count <= 0;
 			end
@@ -208,6 +213,7 @@ always @(posedge clk) begin
 		end
 
 		STATE_IDLE: begin
+			saved_vid <= 1'b0;
 			if(refresh_count > (cycles_per_refresh<<1)) 
 			begin
 				state <= STATE_IDLE_1;
@@ -215,8 +221,7 @@ always @(posedge clk) begin
 			end
 			else
 			begin
-				saved_vid <= 1'b0;
-				if(sdram_cpu_req) // request has to go away after ready=0
+				if(sdram_cpu_req & !sdram_cpu_ack) // request has to go away after ready=0
 				begin
 //					fix byte writes [no new command until data is actually written]
 					if (~sdram_cpu_rnw)
@@ -228,7 +233,6 @@ always @(posedge clk) begin
 					saved_wr   	<= ~sdram_cpu_rnw;
 					command    	<= CMD_ACTIVE;
 					state      	<= STATE_WAIT;
-					sdram_cpu_ready	<= 0; //not ready [ack req]
 					sdram_busy <= 1'b1;
 				end
 				else
@@ -239,7 +243,6 @@ always @(posedge clk) begin
 						saved_vid <= 1'b1;
 						saved_wr <= 1'b0;
 						sdram_busy <= 1'b1;
-						sdram_vid_ready	<= 0; //not ready [ack req]
 						state	<= STATE_WAIT;
 					end
 				end
@@ -259,8 +262,10 @@ always @(posedge clk) begin
 		
 		STATE_RW1: begin
 			SDRAM_A <= cas_addr;
-			sdram_cpu_ack <= 1'b1;
-			sdram_vid_ack <= 1'b1;
+			if (saved_vid)
+				sdram_vid_ack <= 1'b1;
+			else
+				sdram_cpu_ack <= 1'b1;
 
 			if(saved_wr) begin
 				command  <= CMD_WRITE;
