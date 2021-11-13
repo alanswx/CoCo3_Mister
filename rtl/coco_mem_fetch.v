@@ -72,7 +72,7 @@ module coco_mem_fetch(
 
 );
 
-localparam WORD_END_COUNT = 9'd80 - 1'd1;
+localparam WORD_END_COUNT = 9'd160 - 1'd1;
 
 
 wire	[24:0]	PHY_VID_ADD;
@@ -160,7 +160,7 @@ begin
 				begin
 					SDRAM_VID_REQ <= 1'b0;
 
-					if (read_count == WORD_END_COUNT)
+					if (read_count >= WORD_END_COUNT)
 					begin
 						read_count <= 9'h000;
 						state <= state_done;
