@@ -103,6 +103,8 @@ localparam STATE_WAIT    = 1;
 localparam STATE_WAIT1   = 2;
 localparam STATE_RW1     = 3;
 localparam STATE_IDLE    = 4;
+localparam STATE_DLY1    = 5;
+localparam STATE_DLY2    = 6;
 localparam STATE_IDLE_7  = 17;
 localparam STATE_IDLE_6  = 16;
 localparam STATE_IDLE_5  = 15;
@@ -240,6 +242,7 @@ always @(posedge clk) begin
 					if (sdram_vid_req)
 					begin
 						{cas_addr[12:9],SDRAM_BA,SDRAM_A,cas_addr[8:0]} <= {2'b00, 2'b10, sdram_vid_addr[24:1]}; // No bytes for reads...
+						command    	<= CMD_ACTIVE;
 						saved_vid <= 1'b1;
 						saved_wr <= 1'b0;
 						sdram_busy <= 1'b1;
@@ -278,11 +281,18 @@ always @(posedge clk) begin
 				command <= CMD_READ;
 				state   <= STATE_IDLE;
 				if (saved_vid)
+				begin
 					data_vid_ready_delay[CAS_LATENCY+BURST_LENGTH] <= 1;
+					state   <= STATE_DLY1;
+				end
 				else
 					data_cpu_ready_delay[CAS_LATENCY+BURST_LENGTH] <= 1;
 			end
 		end
+		STATE_DLY1:
+			state   <= STATE_DLY2;
+		STATE_DLY2:
+			state   <= STATE_IDLE;
 	endcase
 
 	if (init) begin

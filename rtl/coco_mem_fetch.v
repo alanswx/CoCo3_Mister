@@ -82,6 +82,7 @@ reg		[8:0]	read_count;
 reg		[4:0]	state;
 reg				second_write;
 reg				init_offset_a0;
+reg		[4:0]	a0_delay;
 
 localparam state_pre_start = 	4'd0;
 localparam state_start = 		4'd1;
@@ -90,6 +91,7 @@ localparam state_wait_accept = 	4'd2;
 localparam state_done = 		4'd10;
 
 assign BUF_HBORDER[0] = HBORDER;
+assign a0_delay[0] = init_offset_a0;
 
 assign	PHY_VID_ADD = 	({COCO1, HRES[3]} == 2'b01)           ?	RAM_ADDRESS + {         VID_READ_OFFSET[8:0],   1'b0}:  // 1K  bytes
 //                      ({COCO1, HRES[3:1]} == 4'b0100)       ?	RAM_ADDRESS + {1'b0,    VID_READ_OFFSET[7:0],   1'b0}:  // 512 bytes
@@ -118,6 +120,9 @@ begin
 	begin
 //		delay 2 clocks [may need to be more because we are running fast]
 		BUF_HBORDER[2:1] <= BUF_HBORDER[1:0];
+
+//		delay the a0 component 4 clocks to line up with the read data
+		a0_delay[4:1] <= a0_delay[3:0];
 		
 		BUFF_DATA_O <= SDRAM_DOUT; // 1 clock delay so we can affect the write flag
 
@@ -127,7 +132,7 @@ begin
 			second_write <= 1'b0;
 		
 //		Eliminate second_write on the first odd write
-		BUFFER_WRITE <= SDRAM_VID_READY && !(second_write && init_offset_a0);
+		BUFFER_WRITE <= SDRAM_VID_READY && !(second_write & a0_delay[4]);
 
 		if (BUFFER_WRITE)
 			BUFF_ADD <= BUFF_ADD + 1'b1;
@@ -150,7 +155,7 @@ begin
 				begin
 					SDRAM_VID_REQ <= 1'b1;
 					state <= state_wait_accept;
-					init_offset_a0 <= HOR_OFFSET[0];
+					init_offset_a0 <= PHY_VID_ADD[1];
 				end
 			end
 

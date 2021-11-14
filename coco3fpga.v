@@ -1726,6 +1726,9 @@ wire	[15:0]		BUFF_DATA_O;
 wire	[15:0]		BUFF_DATA;
 wire				BUFFER_WRITE;
 
+wire	[24:0]		test_address;
+
+assign test_address = {21'b000000000000000000000, GPIO_DIR[3:0]};
 
 coco_mem_fetch video_fetch(
 	.fast_clk(CLK_114),
@@ -1744,7 +1747,7 @@ coco_mem_fetch video_fetch(
 	.BUFFER_WRITE(BUFFER_WRITE),
 	
 //	Video Controller Inputs for physical address computation
-	.RAM_ADDRESS(VIDEO_ADDRESS),
+	.RAM_ADDRESS(test_address),
 	.HBORDER(HBORDER),
 	.HOR_OFFSET(HOR_OFFSET),
 	.COCO1(COCO1),
