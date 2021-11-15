@@ -1730,6 +1730,7 @@ wire	[24:0]		test_address;
 
 assign test_address = {21'b000000000000000000000, GPIO_DIR[3:0]};
 
+
 coco_mem_fetch video_fetch(
 	.fast_clk(CLK_114),
 	.RESET_N(RESET_N),
