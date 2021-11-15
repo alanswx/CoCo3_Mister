@@ -1004,22 +1004,22 @@ COCO_ROM CC3_ROM_CART(
 .WRITE((ioctl_index[5:0] == 6'd1) & ioctl_wr)
 );
 
+// Removal of sram [V5]
+//COCO_SRAM CC3_SRAM0(
+//.CLK(~clk_sys),
+//.ADDR(RAM0_ADDRESS[15:0]),
+//.R_W(RAM0_RW_N | RAM0_BE0_N),
+//.DATA_I(RAM0_DATA_I[7:0]),
+//.DATA_O(RAM0_DATA_O[7:0])
+//);
 
-COCO_SRAM CC3_SRAM0(
-.CLK(~clk_sys),
-.ADDR(RAM0_ADDRESS[15:0]),
-.R_W(RAM0_RW_N | RAM0_BE0_N),
-.DATA_I(RAM0_DATA_I[7:0]),
-.DATA_O(RAM0_DATA_O[7:0])
-);
-
-COCO_SRAM CC3_SRAM1(
-.CLK(~clk_sys),
-.ADDR(RAM0_ADDRESS[15:0]),
-.R_W(RAM0_RW_N | RAM0_BE1_N),
-.DATA_I(RAM0_DATA_I[15:8]),
-.DATA_O(RAM0_DATA_O[15:8])
-);
+//COCO_SRAM CC3_SRAM1(
+//.CLK(~clk_sys),
+//.ADDR(RAM0_ADDRESS[15:0]),
+//.R_W(RAM0_RW_N | RAM0_BE1_N),
+//.DATA_I(RAM0_DATA_I[15:8]),
+//.DATA_O(RAM0_DATA_O[15:8])
+//);
 
 assign	ENA_ORCC =	({ROM_SEL, MPI_CTS} == 3'b100)						?	1'b1:		// Orchestra-90CC C000-DFFF Slot 1
 																								1'b0;
@@ -1081,8 +1081,8 @@ in any banks in any order, by simply writing the proper data into these latches.
 assign	DATA_IN =
 														(RAM0_BE0_L & end_hold)		?	hold_data[7:0]:
 														(RAM0_BE1_L & end_hold)		?	hold_data[15:8]:
-														RAM0_BE0		?	RAM0_DATA_O[7:0]:
-														RAM0_BE1		?	RAM0_DATA_O[15:8]:
+//														RAM0_BE0		?	RAM0_DATA_O[7:0]: Removal of sram data out [V5]
+//														RAM0_BE1		?	RAM0_DATA_O[15:8]:
 //														RAM1_BE0		?	RAM1_DATA[7:0]:
 //														RAM1_BE1		?	RAM1_DATA[15:8]:
 //														RAM1_BE2		?	RAM1_DATA[7:0]:
@@ -1481,7 +1481,8 @@ begin
 	end
 end
 
-assign sdram_cpu_addr = {20'b00000000000000000000, ADDRESS[3:0]};
+//assign sdram_cpu_addr = {20'b00000000000000000000, ADDRESS[3:0]}; Fix sdram address [V5]
+assign sdram_cpu_addr = {4'b0000, RAM0_ADDRESS[19:0], ADDRESS[0]};
 assign sdram_cpu_din = DATA_OUT;
 
 //BANKS
@@ -1544,7 +1545,8 @@ begin
 			RAM0_BE1_N <=  !RAM0_BE1;
 
 			cpu_ena <= 1'b1;
-			if (VMA & (ADDRESS[15:4]==12'hffe))
+//			if (VMA & (ADDRESS[15:4]==12'hffe)) ALL sdram [V5]
+			if (VMA & RAM_CS)
 			begin
 //				sdram memory cycle
 //				start hold and get which byte
