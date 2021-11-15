@@ -1,0 +1,141 @@
+GaryB — 10/20/2021
+Just like the original CoCo3FPGA, the COLOR signal is an input to some logic that converts the palette number to an 12 bit RGB signal. I will be uploading other sections as soon as I have them.
+
+MasterS3263827 — 10/20/2021
+OK! Sounds great.
+
+GaryB — 10/20/2021
+One difference in this video compared to the CoCo3FPGA, the character generator is external. This is because we had a request to be able to reprogram the fonts. This video will be very similar to the next version of the CoCo3FPGA except the CoCo3FPGA will still put out VGA instead of CoCo3 RGB. It is my understanding the MISTer FPGA wants to do the conversion from 15 KHz video to HDMI. Is this correct?
+
+MasterS3263827 — 10/20/2021
+So it CAN do the conversion.  I wanted to go back to 15 Khz to reduce the dram bandwidth...
+
+GaryB — 10/20/2021
+Yes I understand that. We will lose one feature of the CoCo3FPGA, the double vertical resolution. Most people do not use that feature because the CoCo3FPGA is the only platform where this works. The GIME-X does not support this feature because the exact same limitation.
+
+MasterS3263827 — 10/20/2021
+Sounds good.  Your documentation does it show how the modules all stitch together?
+
+GaryB — 10/20/2021
+I will see what I can do for that.
+I do not have a clue how the sound works on the MISTer FPGA.
+And the joysticks
+
+MasterS3263827 — 10/20/2021
+Should I be able to sub this new module for the one inside the current implementation?
+We have both working.
+except for orch90 and I think that is fixable. 
+
+GaryB — 10/20/2021
+No there are differences that need to be taken care of. The most important, the video reads need to be put into a buffer instead of being read by the video controller.
+Second, the character generator needs to be moved from inside the video controller to the top level. It will be changed to a two port RAM so it can be modified under 6809 control.
+
+MasterS3263827 — 10/20/2021
+cake.
+ok - so it sounds like a definable starting place.  I'll keep sram and just design a simple controller and see if we can get the rest up and running.
+master_clk = 28 - pix-clk=14?
+
+GaryB — 10/20/2021
+Master clock can be any multiplier of 14 you want, i.e. 28, 57. pix_clk is 14.
+
+MasterS3263827 — 10/20/2021
+So the buffer is externa... how does it work?  Can I start at horz sync and go get a bunch of data [how much] 
+
+GaryB — 10/20/2021
+I did a two clock cycle buffer of HBORDER. I do a 16 bit read from memory and write that into the buffer, then increment the address and do the next read until the buffer is filled up or the HBORDER goes away.
+I wish we could start at horizontal sync, but the real GIME reads just before it is needed. So people got sloppy and start their interrupt routine at the falling edge of HSync which means they barely get changes made by the time the border is starting to display.
+Typical DRAM read:
+begin
+        //   WE_N <= 2'b11;
+        if(!HBORDER_BUF[2] & !DOUBLE)
+        begin
+            VID_READ_OFFSET <= HOR_OFFSET;
+            VID_BUFF_ADD <= {BUFF_BANK, 9'h000};
+            RCYCLE0 <= 1'b1;
+        end
+        else
+        begin
+            RAM_Z  <= {VID_READ_ADD[18], VID_READ_ADD[16:9]};
+            RAM_Z2 <= {VID_READ_ADD[17], VID_READ_ADD[8:1]};
+            RAM_Z_EXT <= VID_READ_ADD[22:21];
+            RAM_Z2_EXT <= VID_READ_ADD[20:19];
+            //    RAM_Z_EXT <= VID_READ_ADD[22:21];
+            //    RAM_Z2_EXT <= {VID_READ_ADD[23], VID_READ_ADD[23]};
+            RAM_Z3_EXT <= VID_READ_ADD[20:19];
+            RAS_FLAG <= 1'b0;      // Always strobe RAS (Read and Refresh)
+            VID_READ_OFFSET <= VID_READ_OFFSET + 1'b1;
+            RCYCLE0 <= 1'b0;
+        end
+    end
+Forget the DOUBLE signal as it only pertains to a feature I wish I had never started. Maybe we need to add it later, but not now.
+assign VID_READ_ADD = ({COCO1, HRES[3]} == 2'b01)           ?   VID_ADDRESS + {         VID_READ_OFFSET[8:0],   1'b0}:      // 1K  bytes
+//                      ({COCO1, HRES[3:1]} == 4'b0100)       ?   VID_ADDRESS + {1'b0,    VID_READ_OFFSET[7:0],   1'b0}:      // 512 bytes
+                                                                VID_ADDRESS + {2'b00,   VID_READ_OFFSET[6:0],   1'b0};      // 256 Bytes
+
+MasterS3263827 — 10/20/2021
+ok...  I think I can work with that.  I'm sure I'll have lots of questions...  From your comment above -do we only have 2 14mhz clocks to get the data flowing?
+
+GaryB — 10/20/2021
+I only have one in the GIME-X. But I am only using it for the video. I do not believe anything else if using 14 MHz. I have not converted the GIME-X over to the 28 MHz clock so a lot of things still run on the E-Clock. I am converting over the CoCo3FPGA to master clocks. Let me get that code for you.
+////////////////////////////////////////////////////////////////////////////////
+// Project Name: CoCo3FPGA Version 4.0
+// File Name:  coco3fpga_top.v
+//
+// CoCo3 in an FPGA
+//... (118 KB left)
+Expand
+coco3fpga_top.v
+168 KB
+But I am still working on this code, so it will probably not compile right now. And it uses the 50 MHz clock.
+But it should be closer that what you have.
+
+MasterS3263827 — 10/20/2021
+I think you misunderstood my question or I misunderstood your answer...  So HBORDER occurs, how long do I have to get data into the ram buffer (only 2, 14 mhz clocks?) ram_data  is for the buffer, buff_add is the address [a port of a dual port 256x16 ram?].  Is the fetching address RAM_ADDRESS?
+That is so cool...  considering my AMIGA background...
+
+GaryB — 10/20/2021
+It is more than that. I believe hborder starts approximately 38 - 14 MHz clocks before the buffer is read for video.
+MasterS3263827 — 10/20/2021
+Perfect.  What is the starting address...
+and buffer size... 
+
+GaryB — 10/20/2021
+The Video controller calculates the starting address of each line. But the horizontal scroll / offset is done in the state machine that does the memory reads. The horizontal scroll is captured at when the HBORDER_BUF[2] is 0. And the last value captured is used while HBORDER_BUF[2] is 1. But it is incremented each time a read is finished. It is used in the final memory address calculation. See the assign VID_READ_ADD line above.
+It is kind of a convoluted way of doing it, but the GIME was kind of a convoluted chip.
+I am still working on the top file I gave you so there are some issues with that. There is a FETCH signan that needs to go away. I will fix that.
+The buffer size needs to be 256  - 16 bit words.
+If we can read memory fast enough, to get the 640 pixel 256 color mode, then we would be 512 - 16 bit words.
+But that is a streach goal.
+stretch goal
+
+MasterS3263827 — 10/20/2021
+😃
+ok - I sort of get it.  BUFF_ADD and RAM_DATA are the port the coco3video is pulling from - correct?
+
+What is RAM_ADDRESS?
+[I know I am likely keeping you up]  If you want to go to bed - we can take this back up tomorrow - you've given me a lot to do...
+
+GaryB — 10/20/2021
+I am good
+
+MasterS3263827 — 10/20/2021
+ram_address is 24:0
+
+GaryB — 10/20/2021
+RAM_ADDRESS is calculated in the Video Controller. It is the starting address in RAM of the memory for the line. But there is a feature in the GIME that this can be modified on a line x line bases called the horizontal scroll register. using the scroll register you can scroll the address up to 256 bytes in 2 byte increments. But the address does not just get scrolled. Lets say the video mode needs 80 bytes for the line and the scroll register is scrolling the line by 200 bytes, when the address is read for the 255 byte, it starts back at the beginning. Kind of like a circular buffer. If you read off the right, it starts back on the left.
+Thats why the  use of VID_READ_OFFSET[6:0]  (128 2 byte reads)
+25 bits allows up to 16 meg of RAM
+
+MasterS3263827 — 10/20/2021
+In the code above VID_ADDRESS = RAM_ADDRESS?
+and it really needs to be calculated with:
+assign VID_READ_ADD = ({COCO1, HRES[3]} == 2'b01)           ?   VID_ADDRESS + {         VID_READ_OFFSET[8:0],   1'b0}:      // 1K  bytes
+//                      ({COCO1, HRES[3:1]} == 4'b0100)       ?   VID_ADDRESS + {1'b0,    VID_READ_OFFSET[7:0],   1'b0}:      // 512 bytes
+                                                                VID_ADDRESS + {2'b00,   VID_READ_OFFSET[6:0],   1'b0};      // 256 Bytes
+So then VID_READ_ADD is the physical address to get.
+
+GaryB — 10/20/2021
+Yes,  in the module statement.   .RAM_ADDRESS(VIDEO_ADDRESS)
+
+MasterS3263827 — 10/20/2021
+Got it....

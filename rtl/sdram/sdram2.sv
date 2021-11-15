@@ -44,13 +44,24 @@ module sdram_32r8w
 	output            SDRAM_CKE,   // clock enable
 	output            SDRAM_CLK,   // clock for chip
 
-	input      [24:0] sdram_addr,  // 25 bit address for 8bit mode. 
-	output reg [31:0] sdram_ldout, // data output to cpu
-	output reg [15:0] sdram_dout,  // data output to cpu
-	input      [7:0]  sdram_din,   // data input from cpu
-	input             sdram_req,   // request
-	input             sdram_rnw,   // 1 - read, 0 - write
-	output reg        sdram_ready  // dout is valid. Ready to accept new read/write.
+//	CPU R/W port
+	input      [24:0] sdram_cpu_addr,  // 25 bit address for 8bit mode. 
+//	output reg [31:0] sdram_ldout,     // data output to cpu
+	output reg [15:0] sdram_dout,      // data output to cpu [for both ports]
+	input      [7:0]  sdram_cpu_din,   // data input from cpu
+	input             sdram_cpu_req,   // request
+	input             sdram_cpu_rnw,   // 1 - read, 0 - write
+	output reg		  sdram_cpu_ack,   // 1 = ack
+	output reg        sdram_cpu_ready, // dout is valid. Ready to accept new read/write.
+
+//	Video R port
+	input      [24:0] sdram_vid_addr,  // 25 bit A0=0. 
+	input             sdram_vid_req,   // request
+	output reg		  sdram_vid_ack,   // 1 = ack
+	output reg        sdram_vid_ready, // dout is valid. Ready to accept new read/write.
+
+	output reg		  sdram_busy		// doing something...
+
 );
 
 assign SDRAM_nCS  = 0; // It would appear from the schematics that this is a toggle if you want more than 64MB ram (full 128MB)
@@ -92,6 +103,8 @@ localparam STATE_WAIT    = 1;
 localparam STATE_WAIT1   = 2;
 localparam STATE_RW1     = 3;
 localparam STATE_IDLE    = 4;
+localparam STATE_DLY1    = 5;
+localparam STATE_DLY2    = 6;
 localparam STATE_IDLE_7  = 17;
 localparam STATE_IDLE_6  = 16;
 localparam STATE_IDLE_5  = 15;
@@ -103,34 +116,58 @@ localparam STATE_IDLE_1  = 11;
 reg [15:0] dq_reg;
 
 always @(posedge clk) begin
-	reg [CAS_LATENCY+BURST_LENGTH:0] data_ready_delay;
+	reg [CAS_LATENCY+BURST_LENGTH:0] data_cpu_ready_delay;
+	reg [CAS_LATENCY+BURST_LENGTH:0] data_vid_ready_delay;
 
 	reg        saved_wr;
+	reg        saved_vid;
 	reg [12:0] cas_addr;
 	reg [31:0] saved_data;
 	reg  [4:0] state = STATE_STARTUP;
-	reg        sdram_rq;
 
-	refresh_count <= refresh_count+1'b1;
+	refresh_count <= refresh_count + 1'b1;
 
-	sdram_rq <= sdram_req;
-	data_ready_delay <= data_ready_delay>>1;
+	data_vid_ready_delay[CAS_LATENCY+BURST_LENGTH] <= 0;
+
+	data_cpu_ready_delay[CAS_LATENCY+BURST_LENGTH] <= 0;
+
+	data_cpu_ready_delay <= data_cpu_ready_delay>>1;
+	data_vid_ready_delay <= data_vid_ready_delay>>1;
 
 	dq_reg <= SDRAM_DQ;
 
-	if(data_ready_delay[1]) sdram_ldout[15:00] <= dq_reg;
-	if(data_ready_delay[0]) sdram_ldout[31:16] <= dq_reg;
+//	if(data_ready_delay[1]) sdram_ldout[15:00] <= dq_reg;
+//	if(data_ready_delay[0]) sdram_ldout[31:16] <= dq_reg;
 
-	if(data_ready_delay[2]) sdram_ready <= 1'b1; // Data valid for the first 16 bits [cycle done]
+	sdram_cpu_ready <= 1'b0;
+	sdram_vid_ready <= 1'b0;
+	
+	if (data_cpu_ready_delay[2]) sdram_cpu_ready <= 1'b1; // Data valid for the first 16 bits
+	if (data_cpu_ready_delay[1]) sdram_busy <= 1'b0; 
+
+	if (data_vid_ready_delay[2]) sdram_vid_ready <= 1'b1; // Data valid for the first 16 bits
+	if (data_vid_ready_delay[1]) sdram_vid_ready <= 1'b1; // Data valid for the second 16 bits
+
+	if (data_vid_ready_delay[0]) sdram_busy <= 1'b0;
+
 
 	SDRAM_DQ <= 16'bZ;
 
 	command <= CMD_NOP;
+
+	if (!sdram_cpu_req)
+		sdram_cpu_ack <= 1'b0;
+
+	if (!sdram_vid_req)
+		sdram_vid_ack <= 1'b0;
+
 	case (state)
 		STATE_STARTUP: begin
 			SDRAM_A    <= 0;
 			SDRAM_BA   <= 0;
-			sdram_ready <= 0; //not ready
+			sdram_cpu_ready <= 0; //not ready
+			sdram_vid_ready <= 0; //not ready
+			sdram_busy <= 1'b1;
 
 			// All the commands during the startup are NOPS, except these
 			if (refresh_count == startup_refresh_max-31) begin
@@ -154,7 +191,7 @@ always @(posedge clk) begin
 
 			if (!refresh_count) begin
 				state   <= STATE_IDLE;
-				sdram_ready <= 1'b1; 
+				sdram_busy <= 1'b0;
 				refresh_count <= 0;
 			end
 		end
@@ -167,58 +204,100 @@ always @(posedge clk) begin
 		STATE_IDLE_2: state <= STATE_IDLE_1;
 		STATE_IDLE_1: begin
 			state      <= STATE_IDLE;
-			sdram_ready <= 1'b1; 
+			sdram_busy <= 1'b0;
 			// mask possible refresh to reduce colliding.
 			if(refresh_count > cycles_per_refresh) begin
 				state    <= STATE_IDLE_7;
 				command  <= CMD_AUTO_REFRESH;
 				refresh_count <= 0;
-				sdram_ready    <= 0; //not ready
+				sdram_busy <= 1'b1;
 			end
 		end
 
 		STATE_IDLE: begin
+			saved_vid <= 1'b0;
 			if(refresh_count > (cycles_per_refresh<<1)) 
 			begin
 				state <= STATE_IDLE_1;
-				sdram_ready    <= 0; //not ready
+				sdram_busy <= 1'b1;
 			end
 			else
-				if(~sdram_rq & sdram_req) begin
+			begin
+				if(sdram_cpu_req & !sdram_cpu_ack) // request has to go away after ready=0
+				begin
 //					fix byte writes [no new command until data is actually written]
-					if (~sdram_rnw)
-						{cas_addr[12:9],SDRAM_BA,SDRAM_A,cas_addr[8:0]} <= {~sdram_addr[0], sdram_addr[0], 2'b10, sdram_addr[24:1]}; // Bytes by A0 for writes
+					if (~sdram_cpu_rnw)
+						{cas_addr[12:9],SDRAM_BA,SDRAM_A,cas_addr[8:0]} <= {~sdram_cpu_addr[0], sdram_cpu_addr[0], 2'b10, sdram_cpu_addr[24:1]}; // Bytes by A0 for writes
 					else
-						{cas_addr[12:9],SDRAM_BA,SDRAM_A,cas_addr[8:0]} <= {2'b00, 2'b10, sdram_addr[24:1]}; // No bytes for reads...
+						{cas_addr[12:9],SDRAM_BA,SDRAM_A,cas_addr[8:0]} <= {2'b00, 2'b10, sdram_cpu_addr[24:1]}; // No bytes for reads...
 
-					saved_data 	<= {sdram_din, sdram_din};
-					saved_wr   	<= ~sdram_rnw;
+					saved_data 	<= {sdram_cpu_din, sdram_cpu_din};
+					saved_wr   	<= ~sdram_cpu_rnw;
 					command    	<= CMD_ACTIVE;
 					state      	<= STATE_WAIT;
-					sdram_ready	<= 0; //not ready
+					sdram_busy <= 1'b1;
 				end
+				else
+				begin
+					if (sdram_vid_req)
+					begin
+						{cas_addr[12:9],SDRAM_BA,SDRAM_A,cas_addr[8:0]} <= {2'b00, 2'b10, sdram_vid_addr[24:1]}; // No bytes for reads...
+						command    	<= CMD_ACTIVE;
+						saved_vid <= 1'b1;
+						saved_wr <= 1'b0;
+						sdram_busy <= 1'b1;
+						state	<= STATE_WAIT;
+					end
+				end
+			end
 		end
 
 		STATE_WAIT:  state <= STATE_WAIT1;
-		STATE_WAIT1: state <= STATE_RW1; // added for clk > 100Mhz
+		STATE_WAIT1: begin
+			if (saved_wr)
+			begin
+				if ((data_vid_ready_delay[5:1] == 5'b00000) && (data_cpu_ready_delay[5:1] == 5'b00000))
+					state <= STATE_RW1; // added for clk > 100Mhz
+			end	
+			else
+				state <= STATE_RW1; // added for clk > 100Mhz
+		end
 		
 		STATE_RW1: begin
 			SDRAM_A <= cas_addr;
+			if (saved_vid)
+				sdram_vid_ack <= 1'b1;
+			else
+				sdram_cpu_ack <= 1'b1;
+
 			if(saved_wr) begin
 				command  <= CMD_WRITE;
 				SDRAM_DQ <= saved_data[15:0];
 				state <= STATE_IDLE;
-				sdram_ready <= 1'b1; // write done
+				sdram_cpu_ready <= 1'b1; // write done
+				sdram_busy	<= 1'b0;
 			end
 			else begin
 				command <= CMD_READ;
 				state   <= STATE_IDLE;
-				data_ready_delay[CAS_LATENCY+BURST_LENGTH] <= 1;
+				if (saved_vid)
+				begin
+					data_vid_ready_delay[CAS_LATENCY+BURST_LENGTH] <= 1;
+					state   <= STATE_DLY1;
+				end
+				else
+					data_cpu_ready_delay[CAS_LATENCY+BURST_LENGTH] <= 1;
 			end
 		end
+		STATE_DLY1:
+			state   <= STATE_DLY2;
+		STATE_DLY2:
+			state   <= STATE_IDLE;
 	endcase
 
 	if (init) begin
+		sdram_cpu_ack <= 1'b0;
+		sdram_vid_ack <= 1'b0;
 		state <= STATE_STARTUP;
 		refresh_count <= startup_refresh_max - sdram_startup_cycles;
 	end
