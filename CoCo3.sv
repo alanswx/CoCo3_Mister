@@ -216,6 +216,7 @@ localparam  CONF_STR = {
 		  "OE,Video Odd Line Black,Off,On;",
 		  "OF,SG4/6,SG4,SG6;",
 		  "OG,Cart Interrupt Disabled,OFF,ON;",
+		  "OH,Artifact Color Set,0,1;",
         "-;",
         "R0,Reset;",
         "J1,Button1,Button2;",
@@ -432,6 +433,7 @@ coco3fpga coco3 (
 .BLUE(b),
 
 .EE_N(easter_egg),
+.PHASE(PHASE),
 
 .H_SYNC(hs),
 .V_SYNC(vs),
@@ -517,6 +519,8 @@ wire [1:0] mpi = status[13:12];
 wire video=status[14];
 wire cartint=status[16];
 wire sg4v6 = status[15];
+
+wire PHASE = status[17];
 
 
 //	Set bit 9 to swap serial ports...

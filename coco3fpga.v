@@ -165,6 +165,7 @@ inout	[7:0]		GPIO,
 
 //  Misc
 input				EE_N,
+input				PHASE,
 output	[31:0]		PROBE,
 
 //  Cassette
@@ -1141,8 +1142,8 @@ assign	DATA_IN =
 //									(ADDRESS == 16'hFF86)		?	SDRAM_DOUT[15:8]:
 //									(ADDRESS == 16'hFF87)		?	{1'b0, SDRAM_ADDR[21:15]}:
 //									(ADDRESS == 16'hFF88)		?	SDRAM_ADDR[14:7]:
-									(ADDRESS == 16'hFF87)		?	BUFF_DATA[15:8]:
-									(ADDRESS == 16'hFF88)		?	BUFF_DATA[7:0]:
+//									(ADDRESS == 16'hFF87)		?	BUFF_DATA[15:8]:
+//									(ADDRESS == 16'hFF88)		?	BUFF_DATA[7:0]:
 
 									(ADDRESS == 16'hFF8E)		?	{RAM0_BE0_L, RAM0_BE1_L, hold, cpu_ena, end_hold, 3'b000}: // to be fixed (SRH)
 //									(ADDRESS == 16'hFF8E)		?	GPIO_DIR:
@@ -1482,7 +1483,7 @@ begin
 end
 
 //assign sdram_cpu_addr = {20'b00000000000000000000, ADDRESS[3:0]}; Fix sdram address [V5]
-assign sdram_cpu_addr = {4'b0000, RAM0_ADDRESS[19:0], ADDRESS[0]};
+assign sdram_cpu_addr = {4'b0000, BLOCK_ADDRESS[7:0], ADDRESS[12:1], ADDRESS[0]};
 assign sdram_cpu_din = DATA_OUT;
 
 //BANKS
@@ -1773,7 +1774,7 @@ COCO_VID_RAM_BUF VIDEO_BUFF (
 // for these addresses - the sdram controller will handle cpu accesses - Read and Write [ready]
 // A simple controller using FF8E (GPIO_DIR) for the memory address and FF88 FF87 for the read. [ready]
 
-assign BUFF_ADD = {1'b0, GPIO_DIR };
+// assign BUFF_ADD = {1'b0, GPIO_DIR }; [V5]
 
 
 //		Disk I/O
@@ -4156,27 +4157,67 @@ wire	[7:0]	font_data;
 wire HBORDER;
 
 // Video timing and modes
-COCO3VIDEO COCOVID(
-	.PIX_CLK(MCLOCK[0]),		//25 MHz = 40 nS
+//COCO3VIDEO COCOVID(
+//	.PIX_CLK(MCLOCK[0]),		//25 MHz = 40 nS
+//	.RESET_N(RESET_N),
+//	.COLOR(COLOR),
+//	.HSYNC_N(H_SYNC_N),
+//	.SYNC_FLAG(H_FLAG),
+//	.VSYNC_N(V_SYNC_N),
+//	.HBLANKING(HBLANK),
+//	.VBLANKING(VBLANK),
+//	.RAM_ADDRESS(VIDEO_ADDRESS),
+//	.RAM_DATA(VIDEO_BUFFER),
+//	.COCO(COCO1),
+//	.V(V),
+//	.BP(GRMODE),
+//	.VERT(VERT),
+//	.VID_CONT(VDG_CONTROL),
+//	.HVEN(HVEN),
+//	.HOR_OFFSET(HOR_OFFSET),
+//	.SCRN_START_HSB(SCRN_START_HSB),		// 2 extra bits for 2MB screen start
+//	.SCRN_START_MSB(SCRN_START_MSB),
+//	.SCRN_START_LSB(SCRN_START_LSB),
+// 	.CSS(CSS),
+//	.LPF(LPF),
+//	.VERT_FIN_SCRL(VERT_FIN_SCRL),
+//	.HLPR(HLPR & !SWITCH[3]),
+//	.LPR(LPR),
+//	.HRES(HRES),
+//	.CRES(CRES),
+//	.BLINK(BLINK),
+//	.SWITCH5(SWITCH[5]),
+//	.HBORDER(HBORDER),
+//	.ROM_ADDRESS(font_adrs),
+//	.ROM_DATA1(font_data)
+//);
+
+// Video timing and modes
+COCO3VIDEO MISTER_COCOVID(
+// Clocks / RESET
+	.MASTER_CLK(clk_sys),		// Should this be inverted?
+	.PIX_CLK(CLK_14),			//14.32 MHz = 69.3 nS
 	.RESET_N(RESET_N),
+
+// Video Out
 	.COLOR(COLOR),
 	.HSYNC_N(H_SYNC_N),
-	.SYNC_FLAG(H_FLAG),
+	.SYNC_FLAG(H_FLAG),			//Have to figure out this one...
 	.VSYNC_N(V_SYNC_N),
 	.HBLANKING(HBLANK),
 	.VBLANKING(VBLANK),
+
+// RAM / Buffer
 	.RAM_ADDRESS(VIDEO_ADDRESS),
-	.RAM_DATA(VIDEO_BUFFER),
-	.COCO(COCO1),
+	.BUFF_ADD(BUFF_ADD),
+	.RAM_DATA(BUFF_DATA),
+
+// Mode Selection
+	.COCO1(COCO1),
 	.V(V),
 	.BP(GRMODE),
 	.VERT(VERT),
 	.VID_CONT(VDG_CONTROL),
-	.HVEN(HVEN),
-	.HOR_OFFSET(HOR_OFFSET),
-	.SCRN_START_HSB(SCRN_START_HSB),		// 2 extra bits for 2MB screen start
-	.SCRN_START_MSB(SCRN_START_MSB),
-	.SCRN_START_LSB(SCRN_START_LSB),
  	.CSS(CSS),
 	.LPF(LPF),
 	.VERT_FIN_SCRL(VERT_FIN_SCRL),
@@ -4184,12 +4225,31 @@ COCO3VIDEO COCOVID(
 	.LPR(LPR),
 	.HRES(HRES),
 	.CRES(CRES),
+	.HVEN(HVEN),
+
+// Starting location
+	.SCRN_START_HSB(SCRN_START_HSB),		// 2 extra bits for 2MB screen start
+	.SCRN_START_MSB(SCRN_START_MSB),
+	.SCRN_START_LSB(SCRN_START_LSB),
+
+
+// Attributes
+	.SWITCH(SWITCH[5]),
 	.BLINK(BLINK),
-	.SWITCH5(SWITCH[5]),
-	.HBORDER(HBORDER),
+
+	.PHASE(PHASE),
+
 	.ROM_ADDRESS(font_adrs),
-	.ROM_DATA1(font_data)
+	.ROM_DATA1(font_data),
+
+	.HBORDER(HBORDER)
+
+//HBORDER_INT,
+//VBORDER_INT
+
 );
+
+
 
 // COCO3 Character rom
 

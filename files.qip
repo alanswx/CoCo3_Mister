@@ -7,7 +7,7 @@ set_global_assignment -name VHDL_FILE CoCo3FPGA_Common/coco3_char_rom.vhd
 set_global_assignment -name VERILOG_FILE CoCo3FPGA_Common/PS2_Key/ps2_keyboard.v
 set_global_assignment -name MIF_FILE CoCo3FPGA_Common/VDAC.mif
 set_global_assignment -name VERILOG_FILE CoCo3FPGA_Common/VDAC.v
-set_global_assignment -name VERILOG_FILE CoCo3FPGA_Common/coco3vid.v
+set_global_assignment -name VERILOG_FILE CoCo3FPGA_Common/Mister_Video.v
 set_global_assignment -name VERILOG_FILE CoCo3FPGA_Common/cocokey.v
 set_global_assignment -name VERILOG_FILE CoCo3FPGA_Common/UART_6551/uart_6551.v
 set_global_assignment -name VERILOG_FILE CoCo3FPGA_Common/UART_6551/6551tx.v

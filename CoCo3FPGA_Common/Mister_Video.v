@@ -6,7 +6,10 @@ RESET_N,
 // Video Out
 COLOR,
 HSYNC_N,
+SYNC_FLAG,
 VSYNC_N,
+HBLANKING,
+VBLANKING,
 
 // RAM / Buffer
 RAM_ADDRESS,
@@ -52,7 +55,13 @@ output      [9:0]   COLOR;
 reg         [9:0]   COLOR;
 output              HSYNC_N;
 reg                 HSYNC_N;
+output				SYNC_FLAG;
+reg					SYNC_FLAG;
 output              VSYNC_N;
+output				HBLANKING;
+reg					HBLANKING;
+output				VBLANKING;
+reg					VBLANKING;
 
 output      [24:0]  RAM_ADDRESS;
 output      [8:0]   BUFF_ADD;
@@ -89,7 +98,7 @@ reg                 HBORDER_INT;
 output              VBORDER_INT;
 reg                 VBORDER_INT;
 
-reg                 HBLANKING;
+//reg                 HBLANKING;
 reg     [9:0]       LINE;
 reg     [3:0]       VLPR;
 reg     [3:0]       COCO_VLPR;
@@ -142,7 +151,7 @@ reg     [1:0]       HISTORY;
 reg     [1:0]       FUTURE;
 wire    [8:0]       BUF_ADD_BASE;
 //reg   [353:0]       VSYNC_DELAY;
-reg                 VBLANKING;
+//reg                 VBLANKING;
 wire    [3:0]       SG_VLPR;
 reg     [139:0]     VSYNC_DELAY;
 reg                 VBORDER;
@@ -1348,6 +1357,7 @@ always @ (negedge MASTER_CLK)
         end
         11'd724:                            // End of right border 720 + 44 - 1 (+ 64) start of back porch
         begin
+			SYNC_FLAG <= !LINE[0];					// Every other line with the first visable line has sync [addrd SH]
             HBORDER <= 1'b0;                // 736 - 28
             PIXEL_COUNT <= 11'd725;
         end
