@@ -216,7 +216,7 @@ localparam  CONF_STR = {
 		  "OE,Video Odd Line Black,Off,On;",
 		  "OF,SG4/6,SG4,SG6;",
 		  "OG,Cart Interrupt Disabled,OFF,ON;",
-		  "OH,Artifact Color Set,0,1;",
+		  "OI,Artifact Color Set,0,1;",
         "-;",
         "R0,Reset;",
         "J1,Button1,Button2;",
@@ -520,7 +520,7 @@ wire video=status[14];
 wire cartint=status[16];
 wire sg4v6 = status[15];
 
-wire PHASE = status[17];
+wire PHASE = status[18];
 
 
 //	Set bit 9 to swap serial ports...

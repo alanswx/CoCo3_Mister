@@ -3521,8 +3521,12 @@ begin
 				end
 				16'hFF9B:
 				begin
-					SCRN_START_HSB <= DATA_OUT[3:0];	// extra 4 bits for 8MB screen start
-					SAM_EXT <= DATA_OUT[5:4];
+//					GIME-X code
+					SCRN_START_HSB <= {1'b0,CPU_DATA[6],CPU_DATA[3:0]}; // extra 6 bits for 32MB screen start (Highest always 0, no way to set it
+//					To do - expand memory management for 32M.
+//					SAM_EXT <= {CPU_DATA[7],CPU_DATA[5:4]};
+//					SCRN_START_HSB <= DATA_OUT[3:0];	// extra 4 bits for 8MB screen start [V5]
+					SAM_EXT <= DATA_OUT[5:4];	// [V5]
 				end
 				16'hFF9C:
 				begin
