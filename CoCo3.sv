@@ -372,7 +372,7 @@ wire ps2_kbd_data;
 wire hblank, vblank;
 wire hs, vs;
 
-wire vga_clk;
+wire pix_clk;
 
 video_mixer #(.GAMMA(1)) video_mixer
 (
@@ -381,7 +381,7 @@ video_mixer #(.GAMMA(1)) video_mixer
 
         .CLK_VIDEO(clk_sys),
 //        .CLK_VIDEO(clk_vid), (SRH)
-        .ce_pix(vga_clk),
+        .ce_pix(pix_clk),
 
         .scandoubler(  1'b0),
         .hq2x(0),
@@ -440,7 +440,7 @@ coco3fpga coco3 (
 .V_SYNC(vs),
 .HBLANK(hblank),
 .VBLANK(vblank),
-.VGA_CLK(vga_clk),
+.PIX_CLK(pix_clk),
 // PS/2
 .ps2_clk(ps2_kbd_clk),
 .ps2_data(ps2_kbd_data),

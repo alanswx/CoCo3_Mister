@@ -98,7 +98,7 @@ output	reg			H_SYNC,
 output	reg			V_SYNC,
 output	reg			VGA_SYNC_N,
 output	reg			VGA_BLANK_N,
-output				VGA_CLK,
+output				PIX_CLK,
 output				HBLANK,
 output				VBLANK,
 
@@ -4059,7 +4059,7 @@ COCOKEY coco_keyboard(
 ******************************************************************************/
 
 // SRH DE2-115 DAC lower video bits = '0000' amd transfomation RGB[7:4] ,= RGB[3:0]
-assign VGA_CLK = MCLOCK[0];
+assign PIX_CLK = CLK_14;
 
 // Video DAC
 always @ (negedge clk_sys)
