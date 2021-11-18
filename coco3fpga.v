@@ -4255,15 +4255,103 @@ COCO3VIDEO MISTER_COCOVID(
 
 
 
+parameter SHDOW_FONT_LOCK_REG = 16'hfff0;
+parameter SHDOW_FONT_DATA_REG = 16'hfff1;
+
+parameter SHDOW_FONT_UNLOCK_UPPER_VAL = 8'hA5;
+parameter SHDOW_FONT_UNLOCK_LOWER_VAL = 8'h5A;
+
+parameter SHDOW_FONT_USE_ALT = 8'hC3;
+
+reg	[7:0]	Font_Lock_Register;
+reg	[7:0]	Font_Data_Register;
+reg			Font_Data_Write_Strobe;
+wire	[1:0]	Font_ROM_Unlocks;
+wire			Font_ROM_Unlocked;
+wire			Font_ROM_Upper_Select;
+reg	[10:0]	Font_ROM_CPU_W;
+reg	[3:0]	Font_ROM_Mach_Shft;
+wire			Font_ROM_Mach_WE;
+wire	[11:0]	Font_ROM_Adrs_Buf;
+wire	[7:0]	Font_ROM_Data_Buf;
+
+always @ (negedge clk_sys or negedge RESET_N)
+begin
+	if(!RESET_N)
+	begin
+		Font_Data_Write_Strobe <= 1'b0;
+//		SHDOW_FONT_LOCK_REG = 16'hfff0;
+		Font_Lock_Register <= 8'H00;
+//		SHDOW_FONT_DATA_REG = 16'hfff1;
+		Font_Data_Register <= 8'H00;
+	end
+	else
+	begin
+		Font_Data_Write_Strobe <= 1'b0;
+		if (PH_2)
+		begin
+			if(!RW_N)
+			begin
+				case (ADDRESS[15:0])
+				SHDOW_FONT_LOCK_REG:
+					Font_Lock_Register <= DATA_OUT[7:0];
+		
+				SHDOW_FONT_DATA_REG:
+					Font_Data_Register <= DATA_OUT[7:0];
+					Font_Data_Write_Strobe <= 1'b1;
+
+				endcase;
+			end
+		end
+	end
+end
+
+assign 	Font_ROM_Unlocks = (Font_Lock_Register == SHDOW_FONT_UNLOCK_UPPER_VAL) ?	2'b10:
+						(Font_Lock_Register == SHDOW_FONT_UNLOCK_LOWER_VAL) ?	2'b01:
+																		2'b00;
+
+assign	Font_ROM_Unlocked =	 Font_ROM_Unlocks[1] | Font_ROM_Unlocks[0];
+
+assign	Font_ROM_Upper_Select = (Font_Lock_Register == SHDOW_FONT_USE_ALT)?			1'b1:
+																		1'b0;
+
+assign Font_ROM_Mach_Shft[0] <= Font_Data_Write_Strobe;
+assign Font_ROM_Mach_WE = Font_ROM_Mach_Shft[1];
+
+always @ (negedge clk_sys or negedge Font_ROM_Unlocked)
+begin
+	if(!Font_ROM_Unlocked)
+	begin
+		Font_ROM_CPU_W <= 11'b00000000000;
+		Font_ROM_Mach_Shft[4:1] <= 4'b0000;
+	end
+	else
+	begin
+		Font_ROM_Mach_Shft[3:1] <= Font_ROM_Mach_Shft[2:0];
+		if (Font_ROM_Mach_Shft[3])
+			Font_ROM_CPU_W <= Font_ROM_CPU_W + 1'b1;
+	end
+end
+
+//	A little MISTer glue
+
+// The address write can be just Font_ROM_Unlocks[1], Font_ROM_CPU_W} if no MISTer
+// The data_w can be Font_Data_Register if no MISTer
+
+assign Font_ROM_Adrs_Buf = (Font_ROM_Unlocked) ?	{Font_ROM_Unlocks[1], Font_ROM_CPU_W}:
+											{ioctl_addr[11:0];
+
+assign Font_ROM_Data_Buf = (Font_ROM_Unlocked) ?	Font_Data_Register:
+											ioctl_data[7:0];
 // COCO3 Character rom
 
 coco3_Char_ROM coco3_Char_ROM(
 	.CLK(clk_sys),
-	.ADDR_R(font_adrs),
-	.ADDR_W(ioctl_addr[10:0]),
-	.WE((ioctl_index[5:0] == 6'd3) & ioctl_wr),
+	.ADDR_R({Font_ROM_Upper_Select, font_adrs}),
+	.ADDR_W(Font_ROM_Adrs_Buf),
+	.WE(((ioctl_index[5:0] == 6'd3) & ioctl_wr) | Font_ROM_Mach_WE), // Can be just Font_ROM_Mach_WE if no MISTer
     .DATA_R(font_data),
-    .DATA_W(ioctl_data[7:0])
+    .DATA_W(Font_ROM_Data_Buf)
 );
 
 // RS232PAK UART
