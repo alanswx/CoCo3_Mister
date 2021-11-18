@@ -421,6 +421,7 @@ coco3fpga coco3 (
 .CLK_114(CLK_114),
 .CLK_57(CLK_57),
 .CLK_28(CLK_28),
+.CLK_14(CLK_14),
 
 .CLK50MHZ(CLK_50M),
 
