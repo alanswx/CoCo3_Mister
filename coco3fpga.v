@@ -321,7 +321,7 @@ reg		[1:0]	LPF;
 reg		[3:0]	HRES;
 reg		[1:0]	CRES;
 reg		[3:0]	VERT_FIN_SCRL;
-reg		[3:0]	SCRN_START_HSB;	// 4 extra bits for 4MB
+reg		[5:0]	SCRN_START_HSB;	// 4 extra bits for 4MB
 reg		[7:0]	SCRN_START_MSB;
 reg		[7:0]	SCRN_START_LSB;
 reg		[6:0]	HOR_OFFSET;
@@ -2739,7 +2739,7 @@ begin
 // FF9A
 //		BDR_PAL <= 12'h000;
 // FF9B
-		SCRN_START_HSB <= 4'h0;		// extra 4 bits for 2MB screen start
+		SCRN_START_HSB <= 6'b000000;		// extra 4 bits for 2MB screen start
 		SAM_EXT <= 2'b00;				// extra 2 bits for 8MB SAMs
 // FF9C
 		VERT_FIN_SCRL <= 4'h0;
