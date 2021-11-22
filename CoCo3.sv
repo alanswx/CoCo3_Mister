@@ -383,7 +383,7 @@ video_mixer #(.GAMMA(1)) video_mixer
 //        .CLK_VIDEO(clk_vid), (SRH)
         .ce_pix(pix_clk),
 
-        .scandoubler(  1'b0),
+        .scandoubler(forced_scandoubler),
         .hq2x(0),
 
 

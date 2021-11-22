@@ -273,7 +273,8 @@ always @(posedge clk) begin
 			if(saved_wr) begin
 				command  <= CMD_WRITE;
 				SDRAM_DQ <= saved_data[15:0];
-				state <= STATE_IDLE;
+//				state <= STATE_IDLE;
+				state   <= STATE_DLY1;
 				sdram_cpu_ready <= 1'b1; // write done
 				sdram_busy	<= 1'b0;
 			end
@@ -287,6 +288,7 @@ always @(posedge clk) begin
 				end
 				else
 					data_cpu_ready_delay[CAS_LATENCY+BURST_LENGTH] <= 1;
+					state   <= STATE_DLY1;
 			end
 		end
 		STATE_DLY1:
