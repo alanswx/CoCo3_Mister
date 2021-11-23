@@ -1,13 +1,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Project Name:	CoCo3FPGA Version 4.1.2
-// File Name:		coco3fpga_dw.v
+// File Name:		coco3fpga.v
 //
 // CoCo3 in an FPGA
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
 // CPU section copyrighted by John Kent
-// The FDC co-processor copyrighted Daniel Wallner.
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -189,7 +188,9 @@ output				sdram_vid_req,
 input				sdram_vid_ack,
 input				sdram_vid_ready,
 
-input				sdram_busy
+input				sdram_busy,
+
+input	[1:0]		turbo_speed
 
  
 );
@@ -413,7 +414,7 @@ reg				DACLRCLK;
 reg		[5:0]	DAC_STATE;
 wire 			H_FLAG;
 
-reg		[1:0]	SWITCH_L;
+reg		[2:0]	SWITCH_L;
 
 wire			CPU_IRQ_N;
 wire			CPU_FIRQ_N;
@@ -1493,7 +1494,7 @@ begin
 	if(!RESET_N)
 	begin
 		CLK <= 6'h00;
-		SWITCH_L <= 2'b00;
+		SWITCH_L <= 3'b000;
 		PH_2_RAW <= 1'b0;
 		RAM0_RW_N <= 1'b1;
 		RAM0_BE0_N <=  1'b1;
@@ -1511,7 +1512,7 @@ begin
 	begin
 		clear_data_ready <= 1'b0;
 
-//		If we are in hold re done.
+//		If we are in hold were done @ data_ready.
 		if (hold)
 		begin
 			if (data_ready)
@@ -1537,16 +1538,13 @@ begin
 		case (CLK)
 		6'h00:
 		begin
-			SWITCH_L <= {SWITCH[0], RATE};					// Normal speed
-// 			Grab video one more time
-			VIDEO_BUFFER <= RAM0_DATA_O;
+			SWITCH_L <= {turbo_speed, RATE};					// Normal speed
 			CLK <= 6'h01;
 			PH_2_RAW <= 1'b1;
-			RAM0_BE0_N <=  !RAM0_BE0;
+			RAM0_BE0_N <=  !RAM0_BE0;						// Delete?
 			RAM0_BE1_N <=  !RAM0_BE1;
 
 			cpu_ena <= 1'b1;
-//			if (VMA & (ADDRESS[15:4]==12'hffe)) ALL sdram [V5]
 			if (VMA & RAM_CS)
 			begin
 //				sdram memory cycle
@@ -1562,6 +1560,7 @@ begin
 //***************************************
 // Gart
 //***************************************
+//	This needs a total rework
 			if(ADDRESS[15:0]==16'hFF73)
 			begin
 				RAM0_RW_N <= RW_N;
@@ -1620,29 +1619,42 @@ begin
 //			Grab sram data to supply after the read hold delay
 //			hold_data <= RAM0_DATA_O;
 				
-			RAM0_ADDRESS <= VIDEO_ADDRESS[19:0];
-			RAM0_BE0_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
-			RAM0_BE1_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
-			RAM0_RW_N <= 1'b1;
-			if({SWITCH_L} == 2'b11)		//50/2 = 25 
+			CLK <= 6'h02;
+		end
+		6'h07:								//	64/8 = 1.7857
+		begin
+			if(SWITCH_L == 3'b101)				//Rate = 7.16?
 				CLK <= 6'h00;
 			else
-				CLK <= 6'h02;
+				CLK <= 6'h08;
+		end
+		6'h0F:								//	64/16 = 3.58
+		begin
+			if(SWITCH_L == 3'b011)				//Rate = 3.58?
+				CLK <= 6'h00;
+			else
+				CLK <= 6'h10;
 		end
 		6'h1F:								//	64/32 = 1.7857
-//		6'h1B:								//	50/28 = 1.7857
-//		6'h17:								//	50/24 = 2.0833
 		begin
-			RAM0_ADDRESS <= VIDEO_ADDRESS[19:0];
-
-			RAM0_BE0_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
-			RAM0_BE1_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
-			VIDEO_BUFFER <= RAM0_DATA_O;
-			if(SWITCH_L[0])				//Rate = 1?
+			if(SWITCH_L == 3'b001)				//Rate = 1.78?
 				CLK <= 6'h00;
 			else
 				CLK <= 6'h20;
 		end
+//		6'h1B:								//	50/28 = 1.7857
+//		6'h17:								//	50/24 = 2.0833
+//		begin
+//			RAM0_ADDRESS <= VIDEO_ADDRESS[19:0];
+
+//			RAM0_BE0_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
+//			RAM0_BE1_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
+//			VIDEO_BUFFER <= RAM0_DATA_O;
+//			if(SWITCH_L[0])				//Rate = 1?
+//				CLK <= 6'h00;
+//			else
+//				CLK <= 6'h20;
+//		end
 //		6'h37:								// 50/56 = 0.89286
 //		begin
 //			RAM0_ADDRESS <= VIDEO_ADDRESS[19:0];
@@ -1651,17 +1663,17 @@ begin
 //			VIDEO_BUFFER <= RAM0_DATA_O;
 //			CLK <= 6'h00;
 //		end
-//		6'h3F:								// Just in case
-//		begin
-//			CLK <= 6'h00;
-//		end
+		6'h3F:								// Just in case
+		begin
+			CLK <= 6'h00;
+		end
 		default:
 		begin
 			CLK <= CLK + 1'b1;
-			RAM0_ADDRESS <= VIDEO_ADDRESS[19:0];
-			RAM0_BE0_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
-			RAM0_BE1_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
-			VIDEO_BUFFER <= RAM0_DATA_O;
+//			RAM0_ADDRESS <= VIDEO_ADDRESS[19:0];
+//			RAM0_BE0_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
+//			RAM0_BE1_N <= !(!VIDEO_ADDRESS[21] & !VIDEO_ADDRESS[20]);
+//			VIDEO_BUFFER <= RAM0_DATA_O;
 		end
 		endcase
 	end
@@ -4155,42 +4167,6 @@ wire	[10:0]	font_adrs;
 wire	[7:0]	font_data;
 
 wire HBORDER;
-
-// Video timing and modes
-//COCO3VIDEO COCOVID(
-//	.PIX_CLK(MCLOCK[0]),		//25 MHz = 40 nS
-//	.RESET_N(RESET_N),
-//	.COLOR(COLOR),
-//	.HSYNC_N(H_SYNC_N),
-//	.SYNC_FLAG(H_FLAG),
-//	.VSYNC_N(V_SYNC_N),
-//	.HBLANKING(HBLANK),
-//	.VBLANKING(VBLANK),
-//	.RAM_ADDRESS(VIDEO_ADDRESS),
-//	.RAM_DATA(VIDEO_BUFFER),
-//	.COCO(COCO1),
-//	.V(V),
-//	.BP(GRMODE),
-//	.VERT(VERT),
-//	.VID_CONT(VDG_CONTROL),
-//	.HVEN(HVEN),
-//	.HOR_OFFSET(HOR_OFFSET),
-//	.SCRN_START_HSB(SCRN_START_HSB),		// 2 extra bits for 2MB screen start
-//	.SCRN_START_MSB(SCRN_START_MSB),
-//	.SCRN_START_LSB(SCRN_START_LSB),
-// 	.CSS(CSS),
-//	.LPF(LPF),
-//	.VERT_FIN_SCRL(VERT_FIN_SCRL),
-//	.HLPR(HLPR & !SWITCH[3]),
-//	.LPR(LPR),
-//	.HRES(HRES),
-//	.CRES(CRES),
-//	.BLINK(BLINK),
-//	.SWITCH5(SWITCH[5]),
-//	.HBORDER(HBORDER),
-//	.ROM_ADDRESS(font_adrs),
-//	.ROM_DATA1(font_data)
-//);
 
 // Video timing and modes
 COCO3VIDEO MISTER_COCOVID(

@@ -211,7 +211,7 @@ localparam  CONF_STR = {
 		  "O6,Swap Joysticks,Off,On;",
 		  "OA,Easter Egg,Off,On;",
 		  "-;",
-		  "OB,Turbo,Off,On;",
+		  "OJK,Turbo Speed:,1.78 Mhz,3.58 Mhz,7.16 Mhz, NA;",
 		  "OCD,MPI,Slot 1, Slot 2, Slot 3, Slot 4;",
 		  "OE,Video Odd Line Black,Off,On;",
 		  "OF,SG4/6,SG4,SG6;",
@@ -508,12 +508,15 @@ coco3fpga coco3 (
   .sdram_vid_ack(sdram_vid_ack),
   .sdram_vid_ready(sdram_vid_ready),
   
-  .sdram_busy(sdram_busy)
+  .sdram_busy(sdram_busy),
+  
+  .turbo_speed(turbo_speed)
 
 );
 
 wire [5:0] cocosound;
 
+wire [1:0] turbo_speed = status[20:19];
 
 wire cpu_speed = status[11];
 wire [1:0] mpi = status[13:12];		
