@@ -1146,8 +1146,7 @@ assign	DATA_IN =
 //									(ADDRESS == 16'hFF87)		?	BUFF_DATA[15:8]:
 //									(ADDRESS == 16'hFF88)		?	BUFF_DATA[7:0]:
 
-									(ADDRESS == 16'hFF8E)		?	{RAM0_BE0_L, RAM0_BE1_L, hold, cpu_ena, end_hold, 3'b000}: // to be fixed (SRH)
-//									(ADDRESS == 16'hFF8E)		?	GPIO_DIR:
+									(ADDRESS == 16'hFF8E)		?	GPIO_DIR:
 									(ADDRESS == 16'hFF8F)		?	GPIO:
 
 									(ADDRESS == 16'hFF90)		?	{COCO1, MMU_EN, GIME_IRQ, GIME_FIRQ, VEC_PAG_RAM, ST_SCS, ROM}:
@@ -1483,7 +1482,6 @@ begin
 	end
 end
 
-//assign sdram_cpu_addr = {20'b00000000000000000000, ADDRESS[3:0]}; Fix sdram address [V5]
 assign sdram_cpu_addr = {4'b0000, BLOCK_ADDRESS[7:0], ADDRESS[12:1], ADDRESS[0]};
 assign sdram_cpu_din = DATA_OUT;
 
@@ -1544,8 +1542,10 @@ begin
 			RAM0_BE0_N <=  !RAM0_BE0;						// Delete?
 			RAM0_BE1_N <=  !RAM0_BE1;
 
-			cpu_ena <= 1'b1;
-			if (VMA & RAM_CS)
+			if (~(hold | end_hold))	// Make sure we are not in a cycle before starting one....
+				cpu_ena <= 1'b1;
+				
+			if (VMA & RAM_CS & ~(hold | end_hold))  // This solves clearing and asserting hold on the same clk
 			begin
 //				sdram memory cycle
 //				start hold and get which byte
@@ -1621,7 +1621,7 @@ begin
 				
 			CLK <= 6'h02;
 		end
-		6'h07:								//	64/8 = 1.7857
+		6'h07:								//	64/8 = 7.16
 		begin
 			if(SWITCH_L == 3'b101)				//Rate = 7.16?
 				CLK <= 6'h00;
@@ -1776,14 +1776,6 @@ COCO_VID_RAM_BUF VIDEO_BUFF (
 	.DATA_I(BUFF_DATA_O),
 	.DATA_O(BUFF_DATA)
 );
-
-// Test cases...
-// CPU accessable sdram is at FFE0-FFEF [16 bytes]
-// for these addresses - the sdram controller will handle cpu accesses - Read and Write [ready]
-// A simple controller using FF8E (GPIO_DIR) for the memory address and FF88 FF87 for the read. [ready]
-
-// assign BUFF_ADD = {1'b0, GPIO_DIR }; [V5]
-
 
 //		Disk I/O
 //=====================================================================================

@@ -635,6 +635,9 @@ always @(posedge clk_sys) begin
 									disk_track <= wdreg_data;
 									s_headloaded <= din[3];
 
+//									fixed seek
+									wdreg_track <= wdreg_data;
+
 									// get busy
 									s_drq_busy <= 2'b01;
 									state <= STATE_WAIT;
