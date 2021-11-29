@@ -251,6 +251,9 @@ assign BUF_ADD_BASE =
 
 // CoCo1 Text and SEMIGRAPHICS
                                             {4'b0000,  PIXEL_COUNT[9:5]};   //32 characters / line
+// SRH fix for 80 col mode...
+wire [3:0]	COCO3_VLPR;
+assign COCO3_VLPR = VLPR + 2'b11;
 
 always @ (negedge MASTER_CLK)
     PIX_CLK_DELAY <= PIX_CLK;
@@ -300,7 +303,7 @@ always @ (negedge MASTER_CLK)
         4'b0110:
         begin
             if(!COCO1)
-                ROM_ADDRESS <=  {CHAR_LATCH_0_TMP[6:0],VLPR[3:0]};                                  // COCO3 Text 1 (40 and 80)
+                ROM_ADDRESS <=  {CHAR_LATCH_0_TMP[6:0],COCO3_VLPR[3:0]};                                  // COCO3 Text 1 (40 and 80)
             else
             begin
                 if({COCO1,VID_CONT[0],CHAR_LATCH_0_TMP[6:5]} == 4'b1100)
@@ -318,7 +321,7 @@ always @ (negedge MASTER_CLK)
         begin
             BUFF_ADD <= BUFF_ADD + 1'b1;
             CHAR_LATCH_2_TMP <= RAM_DATA[15:0];
-            ROM_ADDRESS <=  {CHAR_LATCH_0_TMP[14:8],VLPR[3:0]};                                     // COCO3 Text 1 (40 and 80)
+            ROM_ADDRESS <=  {CHAR_LATCH_0_TMP[14:8],COCO3_VLPR[3:0]};                                     // COCO3 Text 1 (40 and 80)
             CHARACTER0_TMP <=   ROM_DATA1;
         end
         4'b1001:
@@ -332,7 +335,7 @@ always @ (negedge MASTER_CLK)
 //            CHAR_LATCH_4_TMP <= RAM_DATA[15:0];
     //Attribute less TEXT only
             CHARACTER1_TMP <=   ROM_DATA1;
-            ROM_ADDRESS <=  {CHAR_LATCH_1_TMP[6:0],VLPR[3:0]};                                      // COCO3 Text 1 (40 and 80)
+            ROM_ADDRESS <=  {CHAR_LATCH_1_TMP[6:0],COCO3_VLPR[3:0]};                                      // COCO3 Text 1 (40 and 80)
         end
 //        4'b1011:
 //        begin

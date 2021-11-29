@@ -112,14 +112,6 @@ output				OPTTXD,
 input				OPTRXD,
 
 
-//Codec - Audio
-output				AUD_XCK,
-input				AUD_BCLK,
-output	 reg		AUD_DACDAT,
-input				AUD_DACLRCK,
-input				AUD_ADCDAT,
-input				AUD_ADCLRCK,
-
 output [5:0] SOUND_OUT,
 output [15:0] SOUND_LEFT,
 output [15:0] SOUND_RIGHT,
@@ -3924,7 +3916,14 @@ begin
 end
 
 // The code for the internal and Orchestra sound
-`include "CoCo3FPGA_Common\sound.v"
+
+// Internal Sound generation
+assign SOUND		=	{1'b0, SBS, SOUND_DTOA};
+
+assign SOUND_LEFT = {ORCH_LEFT,  ORCH_LEFT_EXT}	+ {SOUND, 8'h00};
+assign SOUND_RIGHT = {ORCH_RIGHT, ORCH_RIGHT_EXT}	+ {SOUND, 8'h00};
+
+
 // The code for the paddles
 //`include "..\CoCo3FPGA_Common\paddles.v"
 
@@ -4061,6 +4060,14 @@ COCOKEY coco_keyboard(
 // SRH DE2-115 DAC lower video bits = '0000' amd transfomation RGB[7:4] ,= RGB[3:0]
 assign PIX_CLK = CLK_14;
 
+wire RED3, RED2, RED1, RED0;
+wire GREEN3, GREEN2, GREEN1, GREEN0;
+wire BLUE3, BLUE2, BLUE1, BLUE0;
+
+assign {RED3, RED2, RED1, RED0} = RED[7:4];
+assign {GREEN3, GREEN2, GREEN1, GREEN0} = GREEN[7:4];
+assign {BLUE3, BLUE2, BLUE1, BLUE0} = BLUE[7:4];
+
 // Video DAC
 always @ (negedge clk_sys)
 begin
@@ -4076,11 +4083,161 @@ begin
 		VGA_SYNC_N <= 1'b1;
 
 //  	Retrace Black
-		if(COLOR_BUF[9])
-		begin
-			RED[7:4] <=	4'B0000;
-			GREEN[7:4] <= 4'B0000;
-			BLUE[7:4] <= 4'B0000;
+//		if(COLOR_BUF[9])
+//		begin
+//			RED[7:4] <=	4'B0000;
+//			GREEN[7:4] <= 4'B0000;
+//			BLUE[7:4] <= 4'B0000;
+//		end
+//  Retrace Black
+        if(COLOR_BUF[9])
+        begin
+            case(COLOR_BUF[7:0])
+            //  8'h80:   // Black
+            //  begin
+            //   {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h000;   // Black
+            //  end
+            8'h81:   // Green
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h492;  // GREEN
+            end
+            8'h82:   // White
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'hFFF;  // WHITE
+            end
+            8'h00:   // Dark Green
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h080;
+            end
+            8'h01:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h010;
+            end
+            8'h02:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h010;
+            end
+            8'h03:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h480;
+            end
+            8'h04:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h490;
+            end
+            8'h05:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h010;
+            end
+            8'h06:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h010;
+            end
+            8'h07:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h400;
+            end
+            8'h08:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h410;
+            end
+            8'h09:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h480;
+            end
+            8'h0A:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h400;
+            end
+            8'h0B:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h490;
+            end
+            8'h0C:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h490;
+            end
+            8'h0D:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h010;
+            end
+            8'h0E:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h010;
+            end
+            8'h0F:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h492;
+            end
+            //  8'h10:   // Black
+            //  begin
+            //    {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h000;
+            //  end
+            8'h11:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h028;
+            end
+            8'h12:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h082;
+            end
+            8'h13:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'hFE8;
+            end
+            8'h14:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'hFD0;
+            end
+            8'h15:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h218;
+            end
+            8'h16:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h130;
+            end
+            8'h17:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h768;
+            end
+            8'h18:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'hDE0;
+            end
+            8'h19:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h9E0;
+            end
+            8'h1A:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h648;
+            end
+            8'h1B:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'hFD8;
+            end
+            8'h1C:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'hDF8;
+            end
+            8'h1D:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h008;
+            end
+            8'h1E:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h020;
+            end
+            8'h1F:
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'hFFF;
+            end
+            default:   // Black
+            begin
+                {RED3, GREEN3, BLUE3, RED2, GREEN2, BLUE2, RED1, GREEN1, BLUE1, RED0, GREEN0, BLUE0} <= 12'h000; // Black
+            end
+            endcase
 		end
 		else
 // 		Request for every other line to be black
