@@ -4060,18 +4060,13 @@ COCOKEY coco_keyboard(
 // SRH DE2-115 DAC lower video bits = '0000' amd transfomation RGB[7:4] ,= RGB[3:0]
 assign PIX_CLK = CLK_14;
 
-//wire RED3, RED2, RED1, RED0;
-//wire GREEN3, GREEN2, GREEN1, GREEN0;
-//wire BLUE3, BLUE2, BLUE1, BLUE0;
-
-//assign {RED3, RED2, RED1, RED0} = RED[7:4];
-//assign {GREEN3, GREEN2, GREEN1, GREEN0} = GREEN[7:4];
-//assign {BLUE3, BLUE2, BLUE1, BLUE0} = BLUE[7:4];
+wire PIX_CLK_D;
 
 // Video DAC
 always @ (negedge clk_sys)
 begin
-	if (MCLOCK[0])
+	PIX_CLK_D <= PIX_CLK;
+	if (PIX_CLK == 1'b1 & PIX_CLK_D == 1'b0)
 	begin
 		COLOR_BUF <= COLOR;						// Delay COLOR by 1 clock cycle to align with 256 Color SRAM
 		H_SYNC <= !H_SYNC_N;					// Delay H_SYNC by 1 clock cycle
@@ -4244,41 +4239,6 @@ begin
 // 		Looks more like the original video
 // 		Not for 15KHz Video
 		begin
-/*			if((H_FLAG&SWITCH[3]))				// Odd lines
-			begin
-				if(COLOR_BUF[8])
-				begin
-					RED[7] <= 1'b0;
-					RED[6] <= VDAC_OUT[11];
-					RED[5] <= VDAC_OUT[8];
-					RED[4] <= VDAC_OUT[5];
-					GREEN[7] <= 1'b0;
-					GREEN[6] <= VDAC_OUT[10];
-					GREEN[5] <= VDAC_OUT[7];
-					GREEN[4] <= VDAC_OUT[4];
-					BLUE[7] <=	1'b0;
-					BLUE[6] <=	VDAC_OUT[9];
-					BLUE[5] <=	VDAC_OUT[6];
-					BLUE[4] <=	VDAC_OUT[3];
-				end
-				else
-				begin
-					RED[7] <= 1'b0;
-					RED[6] <= PALETTE[COLOR_BUF[4:0]][11];
-					RED[5] <= PALETTE[COLOR_BUF[4:0]][8];
-					RED[4] <= PALETTE[COLOR_BUF[4:0]][5];
-					GREEN[7] <= 1'b0;
-					GREEN[6] <= PALETTE[COLOR_BUF[4:0]][10];
-					GREEN[5] <= PALETTE[COLOR_BUF[4:0]][7];
-					GREEN[4] <= PALETTE[COLOR_BUF[4:0]][4];
-					BLUE[7] <=	1'b0;
-					BLUE[6] <=	PALETTE[COLOR_BUF[4:0]][9];
-					BLUE[5] <=	PALETTE[COLOR_BUF[4:0]][6];
-					BLUE[4] <=	PALETTE[COLOR_BUF[4:0]][3];
-				end
-			end
-			else
-*/
 			begin
 				if(COLOR_BUF[8])
 				begin
@@ -4308,7 +4268,7 @@ end
 VDAC	VDAC_inst (
 	.data ( {4'h0,PALETTE[0][11:0]} ),
 	.rdaddress ( COLOR[7:0] ),
-	.rdclock ( MCLOCK[0] ),
+	.rdclock ( PIX_CLK ),
 	.wraddress ( DATA_OUT ),
 	.wrclock ( PH_2 ),
 	.wren ( VDAC_EN ),
@@ -4324,7 +4284,7 @@ wire HBORDER;
 COCO3VIDEO MISTER_COCOVID(
 // Clocks / RESET
 	.MASTER_CLK(clk_sys),		// Should this be inverted?
-	.PIX_CLK(CLK_14),			//14.32 MHz = 69.3 nS
+	.PIX_CLK(PIX_CLK),			//14.32 MHz = 69.3 nS
 	.RESET_N(RESET_N),
 
 // Video Out
