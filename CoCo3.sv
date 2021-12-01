@@ -161,7 +161,6 @@ module emu
 
 
 //`define SOUND_DBG
-assign VGA_SL=0; 
 //assign CE_PIXEL=1;
 
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
@@ -192,34 +191,47 @@ assign VIDEO_ARY = (!ar) ? 12'd3 : 12'd0;
 `include "build_id.v"
 localparam  CONF_STR = {
         "COCO3;;",
+        "-;",
+        "F0,BIN,Load COCO ROMs (CB / ECB / DCB / Orch90);",
+        "F3,BIN,Load COCO Font;",
 		  "-;",
-		  "F0,BIN,Load COCO ROMs (CB / ECB / DCB / Orch90);",
-		  "F3,BIN,Load COCO Font;",
-		  "-;",
-		  "S0,DSK,Load Disk Drive 0;",
-		  "S1,DSK,Load Disk Drive 1;",
-		  "S2,DSK,Load Disk Drive 2;",
-		  "S3,DSK,Load Disk Drive 3;",
-		  "F1,CCC,Load Cartridge;",
-		  "F2,CAS,Load Cassette;",
-		  "TF,Stop & Rewind;",
+        //"OCD,Cart Slot,Orch 90,Large Disk Rom,Cart Load,Disk;",
+        "OCD,Cart Slot,Orch 90,Cart Load,Disk;",
+        "-;",
+        "H2S0,DSK,Load Disk Drive 0;",
+        "H2S1,DSK,Load Disk Drive 1;",
+        "H2S2,DSK,Load Disk Drive 2;",
+        "H2S3,DSK,Load Disk Drive 3;",
+        "H1F1,CCC,Load Cartridge;",
+        "-;",
+
+        "F2,CAS,Load Cassette;",
+        "TF,Stop & Rewind;",
         "OH,Monitor Tape Sound,No,Yes;",
-		  "-;",
-		  "O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
-        "H0O2,Orientation,Vert,Horz;",
-        "O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
+		  
+        "-;",
+        "P1,Video Settings;",
+        "P1-;",
+        "P1-, -= Video Settings =-;",
+        "P1-;",
+        "P1O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
+        "P1O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;", 
+		  "P1OL,Artifact Color,Off - SG4,On - SG6;",
+		  "P1OI,Artifact Color Set,0,1;",
+        "-;",
+
 		  "O6,Swap Joysticks,Off,On;",
 		  "OA,Easter Egg,Off,On;",
 		  "-;",
 		  "OJK,Turbo Speed:,1.78 Mhz,3.58 Mhz,7.16 Mhz, NA;",
-		  "OCD,MPI,Slot 1, Slot 2, Slot 3, Slot 4;",
-		  "OE,Video Odd Line Black,Off,On;",
-		  "OF,SG4/6,SG4,SG6;",
-		  "OG,Cart Interrupt Disabled,OFF,ON;",
-		  "OI,Artifact Color Set,0,1;",
+		  //"OG,Cart Interrupt Disabled,OFF,ON;",
+		  
+		  
+		  
         "-;",
+        "RM,Cold Boot;",
         "R0,Reset;",
-        "J1,Button1,Button2;",
+        "J,Button1,Button2;",
         "jn,A,B;",
         "V,v",`BUILD_DATE
 };
@@ -236,25 +248,16 @@ wire pll_locked, pll2_locked;
 wire CLK_114, CLK_57, CLK_28, CLK_14;
 
 
-//pll pll (SRH)
-//(
-//        .refclk(CLK_50M),
-//        .rst(0),
-//        .outclk_0(clk_ram),
-//        .outclk_1(clk_vid),
-// 		  .outclk_2(clk_sys_2),
-//        .locked(pll_locked)
-//);
 
 pll pll
 (
-        .refclk(CLK_50M),
-        .rst(0),
-        .outclk_0(CLK_114),
-        .outclk_1(CLK_57),
-		.outclk_2(CLK_28),
-		.outclk_3(CLK_14),
-        .locked(pll2_locked)
+	.refclk(CLK_50M),
+	.rst(0),
+	.outclk_0(CLK_114),
+	.outclk_1(CLK_57),
+	.outclk_2(CLK_28),
+	.outclk_3(CLK_14),
+	.locked(pll2_locked)
 );
 
 ///////////////////////////////////////////////////
@@ -280,74 +283,76 @@ wire [21:0] gamma_bus;
 
 assign CLK_VIDEO = clk_sys;
 
+
 // SD - 4 drives 512 size blocks [the wd1793 translates to a 256 byte sector size]	
 hps_io #(.CONF_STR(CONF_STR),.PS2DIV(1000), .VDNUM(4), .BLKSZ(2)) hps_io
 (
-        .clk_sys(clk_sys),
+      .clk_sys(clk_sys),
 //		.clk_sys(CLK_50M), (SRH)
-        .HPS_BUS(HPS_BUS),
+      .HPS_BUS(HPS_BUS),
 
 
-        .buttons(buttons),
-        .status(status),
-        .status_menumask(direct_video),
-        .forced_scandoubler(forced_scandoubler),
-        .gamma_bus(gamma_bus),
-        .direct_video(direct_video),
+      .buttons(buttons),
+      .status(status),
+      .status_menumask({ (mpi != 2'b11), (mpi != 2'b10),direct_video}),
+      .forced_scandoubler(forced_scandoubler),
+      .gamma_bus(gamma_bus),
+      .direct_video(direct_video),
 
-        .ioctl_download(ioctl_download),
-        .ioctl_wr(ioctl_wr),
-        .ioctl_addr(ioctl_addr),
-        .ioctl_dout(ioctl_data),
-        .ioctl_index(ioctl_index),
-// 	SD block level interface
+      .ioctl_download(ioctl_download),
+      .ioctl_wr(ioctl_wr),
+      .ioctl_addr(ioctl_addr),
+      .ioctl_dout(ioctl_data),
+      .ioctl_index(ioctl_index),
 
-		.img_mounted(img_mounted), 		// signaling that new image has been mounted
-		.img_readonly(img_readonly), 	// mounted as read only. valid only for active bit in img_mounted
-		.img_size(img_size),			// size of image in bytes. 1MB MAX!
+      // 	SD block level interface
 
-		.sd_lba(sd_lba),
-		.sd_blk_cnt(sd_blk_cnt), 		// number of blocks-1, total size ((sd_blk_cnt+1)*(1<<(BLKSZ+7))) must be <= 16384!
+      .img_mounted(img_mounted), 		// signaling that new image has been mounted
+      .img_readonly(img_readonly), 	// mounted as read only. valid only for active bit in img_mounted
+      .img_size(img_size),			// size of image in bytes. 1MB MAX!
 
-		.sd_rd(sd_rd),
-		.sd_wr(sd_wr),
-		.sd_ack(sd_ack),
+      .sd_lba(sd_lba),
+      .sd_blk_cnt(sd_blk_cnt), 		// number of blocks-1, total size ((sd_blk_cnt+1)*(1<<(BLKSZ+7))) must be <= 16384!
 
-// 	SD byte level access. Signals for 2-PORT altsyncram.
-		.sd_buff_addr(sd_buff_addr),
-		.sd_buff_dout(sd_buff_dout),
-		.sd_buff_din(sd_buff_din),
-		.sd_buff_wr(sd_buff_wr),
+      .sd_rd(sd_rd),
+      .sd_wr(sd_wr),
+      .sd_ack(sd_ack),
+
+      // 	SD byte level access. Signals for 2-PORT altsyncram.
+      .sd_buff_addr(sd_buff_addr),
+      .sd_buff_dout(sd_buff_dout),
+      .sd_buff_din(sd_buff_din),
+      .sd_buff_wr(sd_buff_wr),
 	  
-		.joystick_0(joy1),
-		.joystick_1(joy2),
+      .joystick_0(joy1),
+      .joystick_1(joy2),
 
-		.joystick_analog_0(joya1),
-		.joystick_analog_1(joya2),
+      .joystick_analog_0(joya1),
+      .joystick_analog_1(joya2),
 		  
-        .ps2_key(ps2_key),
+      .ps2_key(ps2_key),
 
 
-        .ps2_kbd_clk_out    ( ps2_kbd_clk    ),
-        .ps2_kbd_data_out   ( ps2_kbd_data   )
+      .ps2_kbd_clk_out    ( ps2_kbd_clk    ),
+      .ps2_kbd_data_out   ( ps2_kbd_data   )
 );
 
 // SD block level interface
 wire	[3:0]  		img_mounted;
-wire				img_readonly;
+wire				   img_readonly;
 wire	[19:0] 		img_size;
 
 wire	[31:0] 		sd_lba[4];
 wire	[5:0] 		sd_blk_cnt[4];
 
-wire	[3:0]		sd_rd;
-wire	[3:0]		sd_wr;
-wire	[3:0]		sd_ack;
+wire	[3:0]		   sd_rd;
+wire	[3:0]		   sd_wr;
+wire	[3:0]		   sd_ack;
 
 // SD byte level access. Signals for 2-PORT altsyncram.
-wire  	[8:0] 		sd_buff_addr;
-wire  	[7:0] 		sd_buff_dout;
-wire 	[7:0] 		sd_buff_din[4];
+wire  	[8:0]    sd_buff_addr;
+wire  	[7:0]    sd_buff_dout;
+wire 	[7:0]       sd_buff_din[4];
 wire        		sd_buff_wr;
 
 
@@ -374,29 +379,34 @@ wire hs, vs;
 
 wire pix_clk;
 
+
+wire [2:0] scale = status[5:3];
+wire [2:0] sl = scale ? scale - 1'd1 : 3'd0;
+wire       scandoubler = (scale || forced_scandoubler);
+assign VGA_SL = sl[1:0];
+
+wire freeze_sync;
+
+
 video_mixer #(.GAMMA(1)) video_mixer
 (
-        .*,
-	.freeze_sync(),
+   .*,
 
-        .CLK_VIDEO(clk_sys),
-//        .CLK_VIDEO(clk_vid), (SRH)
-        .ce_pix(pix_clk),
+   .CLK_VIDEO(clk_sys),
+   .ce_pix(pix_clk),
 
-        .scandoubler(forced_scandoubler),
-        .hq2x(0),
+	.hq2x(scale==1),
 
 
-        .R(r),
-        //.R(8'b11111111),
-        .G(g),
-        .B(b),
+   .R(r),
+   .G(g),
+   .B(b),
 
-        // Positive pulses.
-        .HSync(hs),
-        .VSync(vs),
-        .HBlank(hblank),
-        .VBlank(vblank)
+   // Positive pulses.
+   .HSync(hs),
+   .VSync(vs),
+   .HBlank(hblank),
+   .VBlank(vblank)
 );
 //
 //
@@ -416,34 +426,33 @@ wire	[31:0]	probe;
 assign USER_OUT[6:0] = probe[30:24];
 
 coco3fpga coco3 (
-//	CLOCKS
+  //	CLOCKS
 
-.CLK_114(CLK_114),
-.CLK_57(CLK_57),
-.CLK_28(CLK_28),
-.CLK_14(CLK_14),
+  .CLK_114(CLK_114),
+  .CLK_57(CLK_57),
+  .CLK_28(CLK_28),
+  .CLK_14(CLK_14),
 
-.CLK50MHZ(CLK_50M),
+  .CLK50MHZ(CLK_50M),
 
-// Reset
-.COCO_RESET_N(~reset),
+  // Reset
+  .COCO_RESET_N(~reset),
 
+  .RED(r),
+  .GREEN(g),
+  .BLUE(b),
 
-.RED(r),
-.GREEN(g),
-.BLUE(b),
+  .EE_N(easter_egg),
+  .PHASE(PHASE),
 
-.EE_N(easter_egg),
-.PHASE(PHASE),
-
-.H_SYNC(hs),
-.V_SYNC(vs),
-.HBLANK(hblank),
-.VBLANK(vblank),
-.PIX_CLK(pix_clk),
-// PS/2
-.ps2_clk(ps2_kbd_clk),
-.ps2_data(ps2_kbd_data),
+  .H_SYNC(hs),
+  .V_SYNC(vs),
+  .HBLANK(hblank),
+  .VBLANK(vblank),
+  .PIX_CLK(pix_clk),
+  // PS/2
+  .ps2_clk(ps2_kbd_clk),
+  .ps2_data(ps2_kbd_data),
 
 
 //  .joy1(coco_joy1),
@@ -452,16 +461,16 @@ coco3fpga coco3 (
   .joya1(coco_ajoy1),
   .joya2(coco_ajoy2),
 
-// R1, L2, R2, L1
-.P_SWITCH(~{coco_joy2[4],coco_joy1[5],coco_joy2[5],coco_joy1[4]}),
-.SWITCH(switch),
-.SOUND_OUT(cocosound),
-.SOUND_LEFT(audio_left),
-.SOUND_RIGHT(AUDIO_R),
+  // R1, L2, R2, L1
+  .P_SWITCH(~{coco_joy2[4],coco_joy1[5],coco_joy2[5],coco_joy1[4]}),
+  .SWITCH(switch),
+  .SOUND_OUT(cocosound),
+  .SOUND_LEFT(audio_left),
+  .SOUND_RIGHT(AUDIO_R),
 //.OPTTXD(USER_OUT[5]),
 //.OPTRXD(USER_IN[6]),
 
-//	Removed offset addition
+  //	Removed offset addition
   .ioctl_addr(ioctl_addr),
   .ioctl_data(ioctl_data),
   .ioctl_download(ioctl_download),
@@ -519,12 +528,14 @@ wire [5:0] cocosound;
 wire [1:0] turbo_speed = status[20:19];
 
 wire cpu_speed = status[11];
-wire [1:0] mpi = status[13:12];		
+wire [1:0] mpi = (status[13:12]==2'b00)  ? 2'b00  : status[13:12]==2'b01 ? 2'b10 : status[13:12]==2'b10 ? 2'b11 : 2'b00;		
 wire video=status[14];
 wire cartint=status[16];
-wire sg4v6 = status[15];
+wire sg4v6 = status[21];
 
 wire PHASE = status[18];
+
+wire coldboot = status[22];
 
 
 //	Set bit 9 to swap serial ports...
