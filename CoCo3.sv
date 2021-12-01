@@ -410,6 +410,21 @@ video_mixer #(.GAMMA(1)) video_mixer
 );
 //
 //
+
+wire	Programmed_RESET_N;
+wire	Programmed_EE;
+
+EE_Cold_Bt COCO3_EE_Cold_Bt (
+	.CLK(CLK_14),
+
+	.Display_EE(easter_egg),				// from MISTer subsystem
+	.Cold_Boot(coldboot),					// from MISTer subsystem
+
+	.RESET_to_COCO_N(Programmed_RESET_N),	// RESET_N to the coco3 [logically AND'ed to top reset]
+	.EE_to_COCO(Programmed_EE)				// Easter Egg to the coco3
+);
+
+
 wire [15:0] audio_left;
 assign AUDIO_L = { audio_left[15:6], audio_left[5] ^ (status[17] ?  casdout : 1'b0),audio_left[4:0]};
 //assign AUDIO_R = AUDIO_L;
@@ -436,13 +451,13 @@ coco3fpga coco3 (
   .CLK50MHZ(CLK_50M),
 
   // Reset
-  .COCO_RESET_N(~reset),
+  .COCO_RESET_N((~reset & Programmed_RESET_N)),
 
   .RED(r),
   .GREEN(g),
   .BLUE(b),
 
-  .EE_N(easter_egg),
+  .EE_N(Programmed_EE),
   .PHASE(PHASE),
 
   .H_SYNC(hs),

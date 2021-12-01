@@ -25,3 +25,4 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/wd1793.sv
 set_global_assignment -name SYSTEMVERILOG_FILE CoCo3.sv
 set_global_assignment -name VHDL_FILE CoCo3FPGA_Common/sram/coco_vid_ram_buf.vhd
 set_global_assignment -name VERILOG_FILE rtl/coco_mem_fetch.v
+set_global_assignment -name VERILOG_FILE rtl/EE_Cold_Bt.v

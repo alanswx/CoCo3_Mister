@@ -1794,7 +1794,7 @@ fdc coco_fdc(
 	.DATA_HDD(DATA_HDD),      			// data out
 	.HALT(HALT),         				// DMA request
 	.NMI_09(NMI_09),
-	.DS_ENABLE(1'b0),					// DS support - '1 to enable drives 0-2
+	.DS_ENABLE(GPIO_DIR[0]),			// DS support - '1 to enable drives 0-2
 
 //	FDC host r/w handling
 	.FF40_CLK(clk_sys),

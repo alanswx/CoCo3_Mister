@@ -45,11 +45,9 @@
 // make sure that this is not a derivative work and that
 // you have the latest version of this file.
 //
-// The latest version of this file can be found at:
 //
 ////////////////////////////////////////////////////////////////////////////////
-// Gary Becker
-// gary_L_becker@yahoo.com
+// Stan Hodge
 //
 //	EE_Cold_Bt by Stan Hodge 11/30/21
 ////////////////////////////////////////////////////////////////////////////////
@@ -71,29 +69,30 @@ reg 			Display_EE_D = 1'b0;
 reg				Cold_Boot_D = 1'b0;
 wire			Start_Display_EE, Start_Cold_Boot;
 wire	[3:0]	inst;
-reg				EE = 1'b0;
-reg				N_RESET <= 1'b1;
+reg				EE = 1'b1;
+reg				N_RESET = 1'b1;
 
 assign			EE_to_COCO = EE;
 assign			RESET_to_COCO_N = N_RESET;
 
-reg		[31:0]	prog = 48'h000000000000;
+reg		[47:0]	prog = 48'h000000000000;
 assign			inst = prog[3:0];
 
 reg				next_instruction = 1'b0;
 
 reg		[23:0]	timer = 24'h000000;
 
-localparam	SHORT_TIME	=	24'h15d9bf;	//	.1 sec @ 14.32 Mhz
-localparam	LONG_TIME	=	24'hda817f;	// 1 sec @ 14.32 Mhz
+localparam	SHORT_TIME	=	24'h0aecdf;	//	.05 sec @ 14.32 Mhz
+localparam	LONG_TIME	=	24'h6D40bf;	// .5 sec @ 14.32 Mhz
 
-localparam	EE_PROG =			{24'h000000, inst_RESET_INACTIVE, inst_EE_OFF, inst_SHORT_TIMER, inst_RESET_ACTIVE, inst_EE_ON, inst_START};
-localparam	Cold_Boot_PROG =	{1'h0, inst_RESET_INACTIVE, inst_SHORT_TIMER, inst_RESET_ACTIVE, inst_SHORT_TIMER, inst_EE_OFF, 
-								inst_LONG_TIMER, inst_RESET_INACTIVE, inst_SHORT_TIMER, inst_RESET_ACTIVE, inst_EE_ON, inst_START};
+localparam	EE_PROG =			{20'h00000, inst_EE_INACTIVE, inst_LONG_TIMER, inst_RESET_INACTIVE, inst_SHORT_TIMER, inst_RESET_ACTIVE,
+								inst_EE_ACTIVE, inst_START};
+localparam	Cold_Boot_PROG =	{1'h0, inst_RESET_INACTIVE, inst_SHORT_TIMER, inst_RESET_ACTIVE, inst_SHORT_TIMER, inst_EE_INACTIVE, 
+								inst_LONG_TIMER, inst_RESET_INACTIVE, inst_SHORT_TIMER, inst_RESET_ACTIVE, inst_EE_ACTIVE, inst_START};
 
 localparam inst_NULL = 			4'd0;
-localparam inst_EE_ON = 		4'd1;
-localparam inst_EE_OFF = 		4'd2;
+localparam inst_EE_ACTIVE = 	4'd1;
+localparam inst_EE_INACTIVE = 	4'd2;
 localparam inst_RESET_ACTIVE = 	4'd3;
 localparam inst_RESET_INACTIVE =4'd4;
 localparam inst_SHORT_TIMER = 	4'd5;
@@ -127,27 +126,31 @@ begin
 
 	case(inst)
 	
-	inst_NULL:
+	inst_NULL:;
 	
 	inst_START:
 	begin
-		timer <= 24'h000000;		// clear timer
-	end
-
-	inst_EE_ON:
-	begin
 		if (!next_instruction)
 		begin
-			EE <= 1'b1;
+			timer <= 24'h000000;		// clear timer
 			next_instruction <= 1'b1;
 		end
 	end
-	
-	inst_EE_OFF:
+
+	inst_EE_ACTIVE:
 	begin
 		if (!next_instruction)
 		begin
 			EE <= 1'b0;
+			next_instruction <= 1'b1;
+		end
+	end
+	
+	inst_EE_INACTIVE:
+	begin
+		if (!next_instruction)
+		begin
+			EE <= 1'b1;
 			next_instruction <= 1'b1;
 		end
 	end
@@ -162,6 +165,7 @@ begin
 	end
 	
 	inst_RESET_INACTIVE:
+	begin
 		if (!next_instruction)
 		begin
 			N_RESET <= 1'b1;
@@ -195,7 +199,7 @@ begin
 		end
 	end
 
-	default:
+	default:;
 
 	endcase
 end

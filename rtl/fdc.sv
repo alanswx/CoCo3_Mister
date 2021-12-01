@@ -463,7 +463,7 @@ wd1793 #(1,1) coco_wd1793_0
 	.wp(drive_wp[0]),
 
 	.size_code(3'd5),		// 5 is 18 sector x 256 bits COCO standard
-	.layout(1'b1),			// 0 = Track-Side-Sector, 1 - Side-Track-Sector
+	.layout(~DS_ENABLE),	// 0 = Track-Side-Sector, 1 - Side-Track-Sector
 	.side(DS_ENA),
 	.ready(drive_ready[0]),
 
@@ -504,7 +504,7 @@ wd1793 #(1,0) coco_wd1793_1
 	.wp(drive_wp[1]),
 
 	.size_code(3'd5),		// 5 is 18 sector x 256 bits COCO standard
-	.layout(1'b1),			// 0 = Track-Side-Sector, 1 - Side-Track-Sector
+	.layout(~DS_ENABLE),	// 0 = Track-Side-Sector, 1 - Side-Track-Sector
 	.side(DS_ENA),
 	.ready(drive_ready[1]),
 
@@ -545,7 +545,7 @@ wd1793 #(1,0) coco_wd1793_2
 	.wp(drive_wp[2]),
 
 	.size_code(3'd5),		// 5 is 18 sector x 256 bits COCO standard
-	.layout(1'b1),			// 0 = Track-Side-Sector, 1 - Side-Track-Sector
+	.layout(~DS_ENABLE),	// 0 = Track-Side-Sector, 1 - Side-Track-Sector
 	.side(DS_ENA),
 	.ready(drive_ready[2]),
 
