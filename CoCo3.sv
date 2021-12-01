@@ -195,7 +195,8 @@ localparam  CONF_STR = {
         "F0,BIN,Load COCO ROMs (CB / ECB / DCB / Orch90);",
         "F3,BIN,Load COCO Font;",
 		  "-;",
-        "OCD,Cart Slot,Orch 90,Large Disk Rom,Cart Load,Disk;",
+        //"OCD,Cart Slot,Orch 90,Large Disk Rom,Cart Load,Disk;",
+        "OCD,Cart Slot,Orch 90,Cart Load,Disk;",
         "-;",
         "H2S0,DSK,Load Disk Drive 0;",
         "H2S1,DSK,Load Disk Drive 1;",
@@ -215,17 +216,20 @@ localparam  CONF_STR = {
         "P1-;",
         "P1O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "P1O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;", 
-		  "P1OE,Video Odd Line Black,Off,On;",
+		  "P1OL,Artifact Color,Off - SG4,On - SG6;",
 		  "P1OI,Artifact Color Set,0,1;",
-		  "P1OL,SG4/6,SG4,SG6;",
         "-;",
 
 		  "O6,Swap Joysticks,Off,On;",
 		  "OA,Easter Egg,Off,On;",
 		  "-;",
 		  "OJK,Turbo Speed:,1.78 Mhz,3.58 Mhz,7.16 Mhz, NA;",
-		  "OG,Cart Interrupt Disabled,OFF,ON;",
+		  //"OG,Cart Interrupt Disabled,OFF,ON;",
+		  
+		  
+		  
         "-;",
+        "RM,Cold Boot;",
         "R0,Reset;",
         "J,Button1,Button2;",
         "jn,A,B;",
@@ -466,7 +470,7 @@ coco3fpga coco3 (
 //.OPTTXD(USER_OUT[5]),
 //.OPTRXD(USER_IN[6]),
 
-//	Removed offset addition
+  //	Removed offset addition
   .ioctl_addr(ioctl_addr),
   .ioctl_data(ioctl_data),
   .ioctl_download(ioctl_download),
@@ -524,13 +528,14 @@ wire [5:0] cocosound;
 wire [1:0] turbo_speed = status[20:19];
 
 wire cpu_speed = status[11];
-wire [1:0] mpi = status[13:12];		
+wire [1:0] mpi = (status[13:12]==2'b00)  ? 2'b00  : status[13:12]==2'b01 ? 2'b10 : status[13:12]==2'b10 ? 2'b11 : 2'b00;		
 wire video=status[14];
 wire cartint=status[16];
 wire sg4v6 = status[21];
 
 wire PHASE = status[18];
 
+wire coldboot = status[22];
 
 
 //	Set bit 9 to swap serial ports...
