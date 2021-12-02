@@ -372,8 +372,9 @@ assign sd_blk_cnt[2] = 6'd0;
 assign sd_blk_cnt[1] = 6'd0;
 assign sd_blk_cnt[0] = 6'd0;
 
-reg				drive_wp[4];
-reg				drive_ready[4];
+reg       drive_wp[4];
+reg       drive_ready[4] = 4'B0000;
+reg       double_sided[4] = 4'B0000;
 
 // As drives are mounted in MISTer this logic saves the write protect and generates ready for
 // changing drives to the wd1793.
@@ -386,12 +387,13 @@ begin
 	if (~RESET_N)
 	begin
 		drive_wp[0] <= 1'b1;
-		drive_ready[0] <= 1'b0;
 	end
 	else
 		begin
 			drive_wp[0] <= img_readonly;
 			drive_ready[0] <= 1'b1;
+			double_sided[0]<= img_size > 20'd368600;//20'd368640;
+
 		end
 end
 
@@ -402,12 +404,12 @@ begin
 	if (~RESET_N)
 	begin
 		drive_wp[1] <= 1'b1;
-		drive_ready[1] <= 1'b0;
 	end
 	else
 		begin
 			drive_wp[1] <= img_readonly;
 			drive_ready[1] <= 1'b1;
+			double_sided[1]<= img_size > 20'd368600;//20'd368640;
 		end
 end
 
@@ -418,12 +420,12 @@ begin
 	if (~RESET_N)
 	begin
 		drive_wp[2] <= 1'b1;
-		drive_ready[2] <= 1'b0;
 	end
 	else
 		begin
 			drive_wp[2] <= img_readonly;
 			drive_ready[2] <= 1'b1;
+			double_sided[2]<= img_size > 20'd368600;//20'd368640;
 		end
 end
 
@@ -434,18 +436,14 @@ begin
 	if (~RESET_N)
 	begin
 		drive_wp[3] <= 1'b1;
-		drive_ready[3] <= 1'b0;
 	end
 	else
 		begin
 			drive_wp[3] <= img_readonly;
 			drive_ready[3] <= 1'b1;
+			//double_sided[3]<= img_size > 20'd368600;//20'd368640;
 		end
 end
-
-wire	DS_ENA;
-
-assign	DS_ENA	=	(DS_ENABLE && DRIVE_SEL_EXT[3]);
 
 
 wd1793 #(1,1) coco_wd1793_0
@@ -478,8 +476,8 @@ wd1793 #(1,1) coco_wd1793_0
 	.wp(drive_wp[0]),
 
 	.size_code(3'd5),		// 5 is 18 sector x 256 bits COCO standard
-	.layout(~DS_ENABLE),	// 0 = Track-Side-Sector, 1 - Side-Track-Sector
-	.side(DS_ENA),
+	.layout(~double_sided[0]),	// 0 = Track-Side-Sector, 1 - Side-Track-Sector
+	.side(double_sided[0] & DRIVE_SEL_EXT[3]),
 	.ready(drive_ready[0]),
 
 	.input_active(0),
@@ -519,8 +517,8 @@ wd1793 #(1,0) coco_wd1793_1
 	.wp(drive_wp[1]),
 
 	.size_code(3'd5),		// 5 is 18 sector x 256 bits COCO standard
-	.layout(~DS_ENABLE),	// 0 = Track-Side-Sector, 1 - Side-Track-Sector
-	.side(DS_ENA),
+	.layout(~double_sided[1]),	// 0 = Track-Side-Sector, 1 - Side-Track-Sector
+	.side(double_sided[1] & DRIVE_SEL_EXT[3]),
 	.ready(drive_ready[1]),
 
 	.input_active(0),
@@ -560,8 +558,8 @@ wd1793 #(1,0) coco_wd1793_2
 	.wp(drive_wp[2]),
 
 	.size_code(3'd5),		// 5 is 18 sector x 256 bits COCO standard
-	.layout(~DS_ENABLE),	// 0 = Track-Side-Sector, 1 - Side-Track-Sector
-	.side(DS_ENA),
+	.layout(~double_sided[2]),	// 0 = Track-Side-Sector, 1 - Side-Track-Sector
+	.side(double_sided[2] & DRIVE_SEL_EXT[3]),
 	.ready(drive_ready[2]),
 
 	.input_active(0),
