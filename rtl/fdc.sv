@@ -373,8 +373,8 @@ assign sd_blk_cnt[1] = 6'd0;
 assign sd_blk_cnt[0] = 6'd0;
 
 reg       drive_wp[4];
-reg       drive_ready[4] = 4'B0000;
-reg       double_sided[4] = 4'B0000;
+reg       [3:0] drive_ready  = 4'B0;
+reg       [3:0] double_sided = 4'B0;
 
 // As drives are mounted in MISTer this logic saves the write protect and generates ready for
 // changing drives to the wd1793.
