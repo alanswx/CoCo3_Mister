@@ -266,7 +266,8 @@ always @(posedge clk_sys) begin
 	if(ce) begin
 		if(ready) begin
 			if(cnt) cnt <= cnt - 1;
-				else cnt <= 35000;
+//				else cnt <= 35000;
+				else cnt <= 31822;
 		end else cnt <= 0;
 		s_index <= (cnt < 100);
 	end

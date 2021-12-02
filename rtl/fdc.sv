@@ -130,6 +130,15 @@ assign	DATA_HDD =		(FF40_RD)							?	{HALT_EN,
 
 // $ff40 control register [part 1]
 
+wire	[3:0]	DRIVE_SEL_EXT_PRE = {DATA_IN[6], DATA_IN[2:0]};
+reg		[2:0]	drive_index;
+
+// SD blk system is a array of 4 systems - one for each drive.  
+// To keep disk track memory, we created 4 wd1793's to match the sd block interfaces
+// For the interface back to the coco - we need to isolate the wd1793 the computer is talking
+// to and route those feedback signals back to the coco.  This is accomplished via the drive
+// select.  'drive_index' identifies which controller is addressd.
+
 
 always @(negedge FF40_CLK or negedge RESET_N)
 begin
@@ -139,6 +148,7 @@ begin
 		MOTOR <= 1'b0;
 		WRT_PREC <= 1'b0;
 		DENSITY <= 1'b0;
+		drive_index <= 3'd0;
 	end
 	else
 	begin
@@ -150,6 +160,28 @@ begin
 			MOTOR <= DATA_IN[3];				// Turn on motor, not used here just checked, 0=MotorOff 1=MotorOn
 			WRT_PREC <= DATA_IN[4];				// Write Precompensation, not used here
 			DENSITY <= DATA_IN[5];				// Density, not used here just checked
+			case(DRIVE_SEL_EXT_PRE)
+			4'b1000:
+				drive_index <= 3'd3;
+
+			4'b0100:
+				drive_index <= 3'd2;
+		
+			4'b0010:
+				drive_index <= 3'd1;
+			
+			4'b0001:
+				drive_index <= 3'd0;
+			
+			4'b1100:
+				drive_index <= 3'd2;
+			
+			4'b1010:
+				drive_index <= 3'd1;
+			
+			4'b1001:
+				drive_index <= 3'd0;
+			endcase
 		end
 	end
 end
@@ -170,23 +202,6 @@ begin
 	end
 end
 
-// SD blk system is a array of 4 systems - one for each drive.  
-// To keep disk track memory, we created 4 wd1793's to match the sd block interfaces
-// For the interface back to the coco - we need to isolate the wd1793 the computer is talking
-// to and route those feedback signals back to the coco.  This is accomplished via the drive
-// select.  'drive_index' identifies which controller is addressd.
-
-
-wire	[2:0]	drive_index;
-
-assign 	drive_index = 	(DRIVE_SEL_EXT[3:0] == 4'b1000)	?	3'd3: 
-						(DRIVE_SEL_EXT[3:0] == 4'b0100)	?	3'd2:
-						(DRIVE_SEL_EXT[3:0] == 4'b0010)	?	3'd1:
-						(DRIVE_SEL_EXT[3:0] == 4'b0001)	?	3'd0:
-						(DRIVE_SEL_EXT[3:0] == 4'b1100)	?	3'd2: // Side select and drive 2 = drive 2
-						(DRIVE_SEL_EXT[3:0] == 4'b1010)	?	3'd1: // Side select and drive 1 = drive 1
-						(DRIVE_SEL_EXT[3:0] == 4'b1001)	?	3'd0: // Side select and drive 0 = drive 0
-															3'd4;
 
 // Control signals for the wd1793
 
