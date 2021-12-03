@@ -262,14 +262,14 @@ always @(posedge clk_sys) begin
 end
 
 always @(posedge clk_sys) begin
-	integer cnt;
+	reg [23:0] cnt;
 	if(ce) begin
 		if(ready) begin
-			if(cnt) cnt <= cnt - 1;
+			if(cnt) cnt <= cnt - 1'b1;
 //				else cnt <= 35000;
-				else cnt <= 31822;
+				else cnt <= 24'd1718400;
 		end else cnt <= 0;
-		s_index <= (cnt < 100);
+		s_index <= (cnt < 24'd1000);
 	end
 end
 
