@@ -196,7 +196,7 @@ localparam  CONF_STR = {
         "F3,BIN,Load COCO Font;",
 		  "-;",
         //"OCD,Cart Slot,Orch 90,Large Disk Rom,Cart Load,Disk;",
-        "OCD,Cart Slot,Orch 90,Cart Load,Disk;",
+        "OCD,Cart Slot,Orch 90,ECB / Cart,Disk;",
         "-;",
         "H2S0,DSK,Load Disk Drive 0;",
         "H2S1,DSK,Load Disk Drive 1;",
@@ -221,10 +221,10 @@ localparam  CONF_STR = {
         "-;",
 
 		  "O6,Swap Joysticks,Off,On;",
-		  "OA,Easter Egg,Off,On;",
+		  "RA,Easter Egg;",
 		  "-;",
 		  "OJK,Turbo Speed:,1.78 Mhz,3.58 Mhz,7.16 Mhz, NA;",
-		  //"OG,Cart Interrupt Disabled,OFF,ON;",
+//		  "OG,Cart Interrupt Disabled,OFF,ON;",
 		  
 		  
 		  
@@ -418,7 +418,7 @@ EE_Cold_Bt COCO3_EE_Cold_Bt (
 	.CLK(CLK_14),
 
 	.Display_EE(easter_egg),				// from MISTer subsystem
-	.Cold_Boot(coldboot),					// from MISTer subsystem
+	.Cold_Boot(coldboot | mpi_reset),		// from MISTer subsystem or mpi change
 
 	.RESET_to_COCO_N(Programmed_RESET_N),	// RESET_N to the coco3 [logically AND'ed to top reset]
 	.EE_to_COCO(Programmed_EE)				// Easter Egg to the coco3
@@ -545,13 +545,30 @@ wire [1:0] turbo_speed = status[20:19];
 wire cpu_speed = status[11];
 wire [1:0] mpi = (status[13:12]==2'b00)  ? 2'b00  : status[13:12]==2'b01 ? 2'b10 : status[13:12]==2'b10 ? 2'b11 : 2'b00;		
 wire video=status[14];
-wire cartint=status[16];
+//wire cartint=status[16];
+wire cartint = 1'b0;
 wire sg4v6 = status[21];
 
 wire PHASE = status[18];
 
 wire coldboot = status[22];
 
+reg	[2:0] mpi_d	= 2'b00;
+reg first_mpi_chg = 1'b0;
+reg mpi_reset = 1'b0;
+
+always @ (negedge CLK_14)
+begin
+	mpi_d <= mpi;
+	mpi_reset <= 1'b0;
+	
+	if (~(mpi == mpi_d))
+		if (~first_mpi_chg)
+			first_mpi_chg <= 1'b1;
+		else
+			mpi_reset <= 1'b1;
+	
+end
 
 //	Set bit 9 to swap serial ports...
 wire [9:0] switch = { 4'b1000,sg4v6,cartint,video,mpi,cpu_speed} ;

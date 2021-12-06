@@ -83,7 +83,7 @@ reg				next_instruction = 1'b0;
 reg		[23:0]	timer = 24'h000000;
 
 localparam	SHORT_TIME	=	24'h0aecdf;	//	.05 sec @ 14.32 Mhz
-localparam	LONG_TIME	=	24'h6D40bf;	// .5 sec @ 14.32 Mhz
+localparam	LONG_TIME	=	24'h418D40;	// .3 sec @ 14.32 Mhz
 
 localparam	EE_PROG =			{20'h00000, inst_EE_INACTIVE, inst_LONG_TIMER, inst_RESET_INACTIVE, inst_SHORT_TIMER, inst_RESET_ACTIVE,
 								inst_EE_ACTIVE, inst_START};

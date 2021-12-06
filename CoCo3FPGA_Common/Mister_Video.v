@@ -253,7 +253,8 @@ assign BUF_ADD_BASE =
                                             {4'b0000,  PIXEL_COUNT[9:5]};   //32 characters / line
 // SRH fix for 80 col mode...
 wire [3:0]	COCO3_VLPR;
-assign COCO3_VLPR = VLPR + 2'b11;
+//assign COCO3_VLPR = VLPR + 2'b11;
+assign COCO3_VLPR = VLPR;
 
 always @ (negedge MASTER_CLK)
     PIX_CLK_DELAY <= PIX_CLK;

@@ -910,7 +910,8 @@ assign	FLASH_ADDRESS =	ENA_DSK		?			{1'b0,9'b000000100, ADDRESS[12:0]}:	//8K Dis
 						ENA_ORCC	?			{1'b0,9'b000000101, ADDRESS[12:0]}:	//8K Orchestra 8K 90CC Slot 1
 //						ENA_PAK		?			{1'b0,7'b0000000, 	ADDRESS[14:0]}:	//Internal R/W CART ROM
 //	(ENA_PAK & (ROM == 2'b11))		?			{1'b0,6'b000000, ~ADDRESS[14],	ADDRESS[13:0]}:	//Internal R/W CART ROM
-						ENA_PAK		?			{1'b0,5'b00000,ROM_BANK,	ADDRESS[13:0]}:	//Internal R/W CART ROM
+//						ENA_PAK		?			{1'b0,5'b00000,ROM_BANK,	ADDRESS[13:0]}:	//Internal R/W CART ROM
+						ENA_PAK		?			{1'b0,5'b0000,ROM_BANK,	ADDRESS[14:0]}:	//Internal R/W CART ROM
 // Slot 3 ROMPak
 //({ENA_PAK,BANK_SIZE,ROM_BANK}== 6'b100000)	?	{1'b0,BANK0,     ADDRESS[14:0]}:	//32K
 //({ENA_PAK,BANK_SIZE,ROM_BANK}== 6'b110000)	?	{1'b0,BANK0,     ADDRESS[14:0]}:	//32K
@@ -980,23 +981,45 @@ COCO_ROM CC3_ROM(
 assign FLASH_DATA =	ENA_PAK	?	CART_DATA:
 								ROM_DATA;
 
-//COCO_ROM_CART CC3_ROM_CART(
-//.ADDR({~FLASH_ADDRESS[14], FLASH_ADDRESS[13:0]}),
-//.DATA(CART_DATA),
-//.CLK(~CLK50MHZ),
-//.WR_ADDR(ioctl_addr[14:0]),
-//.WR_DATA(ioctl_data[7:0]),
-//.WRITE((ioctl_index[5:0] == 6'd1) & ioctl_wr)
-//);
 
 COCO_ROM CC3_ROM_CART(
-.ADDR(FLASH_ADDRESS[15:0]),
+.ADDR({FLASH_ADDRESS[15], (FLASH_ADDRESS[14] ^ inv_a14), FLASH_ADDRESS[13:0]}),
 .DATA(CART_DATA),
 .CLK(~clk_sys),
 .WR_ADDR(ioctl_addr[15:0]),
 .WR_DATA(ioctl_data[7:0]),
 .WRITE((ioctl_index[5:0] == 6'd1) & ioctl_wr)
 );
+
+wire write_to_cart_0;
+wire inv_a14;
+reg	adrs_monitor;
+
+assign write_to_cart_0 = (ioctl_addr[15:0] == 16'b0000000000000000) ?	1'b1:
+																		1'b0;
+
+
+always @(negedge clk_sys or negedge RESET_N)
+begin
+	if(!RESET_N)
+	begin
+		inv_a14 <= 1'b0;
+		adrs_monitor <= 1'b0;
+	end
+	else
+	begin
+		if (adrs_monitor == 1'b0)
+			inv_a14 <= 1'b1;
+		else
+			inv_a14 <= 1'b0;
+			
+		if (write_to_cart_0)
+			adrs_monitor <= 1'b0;
+		if ((ioctl_index[5:0] == 6'd1) & ioctl_wr)
+			adrs_monitor <= adrs_monitor | ioctl_addr[14];
+	end
+end
+
 
 // Removal of sram [V5]
 //COCO_SRAM CC3_SRAM0(
@@ -1826,7 +1849,34 @@ fdc coco_fdc(
 	.probe(fdc_probe)
 );
 
+reg cart_firq_enable;
 
+reg	firq_trig;
+reg	[15:0]	firq_tmr;
+
+always @(negedge clk_sys or negedge RESET_N)
+begin
+	if(!RESET_N)
+	begin
+		firq_trig <= 1'b0;
+		firq_tmr <= 16'h0000;
+		cart_firq_enable <= 1'b1;
+	end
+	else
+	begin
+		if (firq_trig)
+			if (~(firq_tmr == 16'hffff))
+				firq_tmr = firq_tmr + 1'b1;
+			else
+				cart_firq_enable <= SWITCH[4];
+
+		if ((ioctl_index[5:0] == 6'd1) & ioctl_wr)
+		begin
+			firq_trig <= 1'b1;
+			firq_tmr <= 16'h0000;
+		end
+	end
+end
 
 //***********************************************************************
 // Interrupt Sources
@@ -1843,13 +1893,17 @@ begin
 		if (PH_2)
 			case (MPI_SCS)
 			2'b00:
-				CART_INT_IN_N <=  (!CART_INT_IN_N | SWITCH[4])
+				CART_INT_IN_N <=  (!CART_INT_IN_N )
 										&(SER_IRQ);
+//				CART_INT_IN_N <=  (!CART_INT_IN_N | SWITCH[4])
+//										&(SER_IRQ);
 			2'b01:
 				CART_INT_IN_N <= (SER_IRQ);
 			2'b10:
-				CART_INT_IN_N <= (!CART_INT_IN_N | SWITCH[4])
+				CART_INT_IN_N <= (!CART_INT_IN_N | cart_firq_enable)
 										&(SER_IRQ);
+//				CART_INT_IN_N <=  (!CART_INT_IN_N | SWITCH[4])
+//										&(SER_IRQ);
 			2'b11:
 				CART_INT_IN_N <= (SER_IRQ);
 			endcase
