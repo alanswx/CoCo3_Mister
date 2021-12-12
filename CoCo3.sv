@@ -192,8 +192,8 @@ assign VIDEO_ARY = (!ar) ? 12'd3 : 12'd0;
 localparam  CONF_STR = {
         "COCO3;;",
         "-;",
-        "F0,BIN,Load COCO ROMs (CB / ECB / DCB / Orch90);",
-        "F3,BIN,Load COCO Font;",
+        "FA,BIN,Load COCO ROMs (CB / ECB / DCB / Orch90);",
+        "FD,BIN,Load COCO Font;",
 		  "-;",
         //"OCD,Cart Slot,Orch 90,Large Disk Rom,Cart Load,Disk;",
         "OCD,Cart Slot,Orch 90,ECB / Cart,Disk;",
@@ -202,10 +202,10 @@ localparam  CONF_STR = {
         "H2S1,DSK,Load Disk Drive 1;",
         "H2S2,DSK,Load Disk Drive 2;",
         "H2S3,DSK,Load Disk Drive 3;",
-        "H1F1,CCC,Load Cartridge;",
+        "H1FB,CCC,Load Cartridge;",
         "-;",
 
-        "F2,CAS,Load Cassette;",
+        "FC,CAS,Load Cassette;",
         "TF,Stop & Rewind;",
         "OH,Monitor Tape Sound,No,Yes;",
 		  
@@ -438,7 +438,7 @@ wire [7:0] b;
 wire easter_egg = ~status[10];
 wire	[31:0]	probe;
 
-assign USER_OUT[6:0] = probe[30:24];
+assign USER_OUT[6:0] = probe[6:0];
 
 coco3fpga coco3 (
   //	CLOCKS
@@ -615,7 +615,7 @@ sdram_32r8w coco3_sdram
 
 wire casdout;
 wire cas_relay;
-wire load_tape = ioctl_index == 2;
+wire load_tape = ioctl_index == 12;
 
 wire	[15:0]	ram_addr;
 wire	[7:0]	ram_data_o;

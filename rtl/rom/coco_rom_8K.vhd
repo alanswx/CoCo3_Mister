@@ -1,21 +1,16 @@
 --//////////////////////////////////////////////////////////////////////////////
--- Project Name:	CoCo3FPGA Version 4.0
--- File Name:		coco_rom_cart.vhd
+-- Project Name:	CoCo3FPGA Version Mister
+-- File Name:		coco_rom_8K.vhd
 --
 -- CoCo3 in an FPGA
 --
--- Revision: 4.0 07/10/16
 --//////////////////////////////////////////////////////////////////////////////
 --
--- CPU section copyrighted by John Kent
--- The FDC co-processor copyrighted Daniel Wallner.
--- SDRAM Controller copyrighted by XESS Corp.
 --
 --//////////////////////////////////////////////////////////////////////////////
 --
 -- Color Computer 3 compatible system on a chip
 --
--- Version : 4.1.2
 --
 -- Copyright (c) 2008 Gary Becker (gary_l_becker@yahoo.com)
 --
@@ -56,21 +51,10 @@
 --
 -- File history :
 --
---  1.0			Full Release
---  2.0			Partial Release
---  3.0			Full Release
---  3.0.0.1		Update to fix DoD interrupt issue
---	3.0.1.0		Update to fix 32/40 CoCO3 Text issue and add 2 Meg max memory
---	4.0.X.X		Full Release
---	4.1.2.X		Fixed 6502 code for drivewire, removed timer, fixed 6551 baud 
---				rate (& DE2-115 compiler symbol)
 --//////////////////////////////////////////////////////////////////////////////
 -- Gary Becker
 -- gary_L_becker@yahoo.com
 --//////////////////////////////////////////////////////////////////////////////
---//////////////////////////////////////////////////////////////////////////////
--- DE2-115 Conversion by Stan Hodge
--- shodgefamily@yahoo.com
 --//////////////////////////////////////////////////////////////////////////////
 -- MISTer conversion work by Stan Hodge and Alan Steremberg
 
@@ -81,24 +65,24 @@ library ieee;
   use ieee.std_logic_unsigned.all;
   use ieee.numeric_std.all;
 
-entity COCO_ROM_CART is
+entity COCO_ROM_8K is
   port (
 --	Main CPU Port
-    ADDR        : in    std_logic_vector(15 downto 0);
+    ADDR        : in    std_logic_vector(12 downto 0);
     DATA        : out   std_logic_vector(7 downto 0);
 
 	CLK			: in	std_logic;
-	WR_ADDR		: in	std_logic_vector(15 downto 0);
+	WR_ADDR		: in	std_logic_vector(12 downto 0);
 	WR_DATA		: in	std_logic_vector(7 downto 0);
 	WRITE		: in	std_logic
 
     );
 end;
 
-architecture RTL of COCO_ROM_CART is
+architecture RTL of COCO_ROM_8K is
 
 
-  type ROM_ARRAY is array(0 to 65535) of std_logic_vector(7 downto 0);
+  type ROM_ARRAY is array(0 to 8191) of std_logic_vector(7 downto 0);
   signal ROM : ROM_ARRAY;
 
 begin

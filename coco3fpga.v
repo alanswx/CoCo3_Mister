@@ -260,7 +260,7 @@ wire   	[3:0]	 BUTTON_N;
 											//  1 SD Write Protect (1=Protected) wired to switche on the SD card
 											//  0 Easter Egg
 									
-wire			CLK3_57MHZ;
+reg				CLK3_57MHZ;
 
 //WiFi
 wire 			WF_RXD;
@@ -718,7 +718,8 @@ reg 			cpu_ena;
 
 // Probe's defined
 //assign PROBE[6:0] = {CART1_POL, CART1_BUF_RESET_N, CART1_FIRQ_STAT_N, CART1_CLK_N, CART1_FIRQ_N, RESET_N, PH_2};
-assign PROBE[7:0] = {1'b0, CART1_POL, CART1_FIRQ_N, CART1_FIRQ_BUF[0], CART1_CLK_N_D, CART1_FIRQ_RESET_N, CART1_CLK_N, PH_2};
+//assign PROBE[7:0] = {1'b0, CART1_POL, CART1_FIRQ_N, CART1_FIRQ_BUF[0], CART1_CLK_N_D, CART1_FIRQ_RESET_N, CART1_CLK_N, PH_2};
+assign PROBE[7:0] = {2'b00, COCO3_DISKROM_WRITE, COCO3_ROM_WRITE, ioctl_wr, ioctl_download, ioctl_index[7], ioctl_index[6]};
 assign PROBE[15:8] = LEDR[7:0];
 assign PROBE[23:16] = LEDG[7:0];
 //assign PROBE[31:24] = {3'b000, DATA_OUT[3], MOTOR, DRIVE_SEL_EXT[0], HDD_EN, ADDRESS[0]};
@@ -911,7 +912,7 @@ assign	FLASH_ADDRESS =	ENA_DSK		?			{1'b0,9'b000000100, ADDRESS[12:0]}:	//8K Dis
 //						ENA_PAK		?			{1'b0,7'b0000000, 	ADDRESS[14:0]}:	//Internal R/W CART ROM
 //	(ENA_PAK & (ROM == 2'b11))		?			{1'b0,6'b000000, ~ADDRESS[14],	ADDRESS[13:0]}:	//Internal R/W CART ROM
 //						ENA_PAK		?			{1'b0,5'b00000,ROM_BANK,	ADDRESS[13:0]}:	//Internal R/W CART ROM
-						ENA_PAK		?			{1'b0,5'b0000,ROM_BANK,	ADDRESS[14:0]}:	//Internal R/W CART ROM
+						ENA_PAK		?			{1'b0,4'b0000,ROM_BANK,	ADDRESS[14:0]}:	//Internal R/W CART ROM
 // Slot 3 ROMPak
 //({ENA_PAK,BANK_SIZE,ROM_BANK}== 6'b100000)	?	{1'b0,BANK0,     ADDRESS[14:0]}:	//32K
 //({ENA_PAK,BANK_SIZE,ROM_BANK}== 6'b110000)	?	{1'b0,BANK0,     ADDRESS[14:0]}:	//32K
@@ -966,29 +967,74 @@ assign FLASH_CE_S =	({RAM, ROM[1], ADDRESS[15:14]} ==  4'b0010)						?	1'b1:		//
 																						1'b0;
 
 
+wire	[7:0]	COCO3_ROM_DATA;
+wire	[7:0]	COCO3_DISK_ROM_DATA;
+wire	[7:0]	ORCH90_ROM_DATA;
 
-COCO_ROM CC3_ROM(
-.ADDR(FLASH_ADDRESS[15:0]),
-.DATA(ROM_DATA),
+localparam 	[1:0]	BOOT0 = 2'd0;
+localparam 	[1:0]	BOOT1 = 2'd1;
+localparam 	[1:0]	BOOT2 = 2'd2;
+
+localparam	[5:0]	BOOT  = 6'd0;
+
+wire			COCO3_ROM_WRITE = (ioctl_index[7:0] == {BOOT0, BOOT}) & ioctl_wr;
+wire			COCO3_DISKROM_WRITE = (ioctl_index[7:0] == {BOOT1, BOOT}) & ioctl_wr;
+wire			COCO3_ORCH90_ROM_WRITE = (ioctl_index[7:0] == {BOOT2, BOOT}) & ioctl_wr;
+
+
+//COCO_ROM CC3_ROM(
+//.ADDR(FLASH_ADDRESS[15:0]),
+//.DATA(ROM_DATA),
+//.CLK(~clk_sys),
+//.WR_ADDR(ioctl_addr[15:0]),
+//.WR_DATA(ioctl_data[7:0]),
+//.WRITE((ioctl_index[5:0] == 6'd0) & ioctl_wr)
+//);
+
+
+COCO_ROM_32K CC3_ROM(
+.ADDR(FLASH_ADDRESS[14:0]),
+.DATA(COCO3_ROM_DATA),
 .CLK(~clk_sys),
-.WR_ADDR(ioctl_addr[15:0]),
+.WR_ADDR(ioctl_addr[14:0]),
 .WR_DATA(ioctl_data[7:0]),
-.WRITE((ioctl_index[5:0] == 6'd0) & ioctl_wr)
+.WRITE(COCO3_ROM_WRITE)
+);
+
+COCO_ROM_8K CC3_DISK_ROM(
+.ADDR(FLASH_ADDRESS[12:0]),
+.DATA(COCO3_DISK_ROM_DATA),
+.CLK(~clk_sys),
+.WR_ADDR(ioctl_addr[12:0]),
+.WR_DATA(ioctl_data[7:0]),
+.WRITE(COCO3_DISKROM_WRITE)
+);
+
+COCO_ROM_8K CC3_ORCH90_ROM(
+.ADDR(FLASH_ADDRESS[12:0]),
+.DATA(ORCH90_ROM_DATA),
+.CLK(~clk_sys),
+.WR_ADDR(ioctl_addr[12:0]),
+.WR_DATA(ioctl_data[7:0]),
+.WRITE(COCO3_ORCH90_ROM_WRITE)
 );
 
  
 
-assign FLASH_DATA =	ENA_PAK	?	CART_DATA:
-								ROM_DATA;
+assign FLASH_DATA =	ENA_PAK	?								CART_DATA:
+					(FLASH_ADDRESS[15] == 1'b0)			?	COCO3_ROM_DATA:
+					(FLASH_ADDRESS[15:13] == 3'b100)	?	COCO3_DISK_ROM_DATA:
+					(FLASH_ADDRESS[15:13] == 3'b101)	?	ORCH90_ROM_DATA:
+															8'b00000000;
 
 
-COCO_ROM CC3_ROM_CART(
+COCO_ROM_CART CC3_ROM_CART(
 .ADDR({FLASH_ADDRESS[15], (FLASH_ADDRESS[14] ^ inv_a14), FLASH_ADDRESS[13:0]}),
 .DATA(CART_DATA),
 .CLK(~clk_sys),
 .WR_ADDR(ioctl_addr[15:0]),
 .WR_DATA(ioctl_data[7:0]),
-.WRITE((ioctl_index[5:0] == 6'd1) & ioctl_wr)
+.WRITE((ioctl_index[5:0] == 6'd11) & ioctl_wr)
 );
 
 wire write_to_cart_0;
@@ -1015,7 +1061,7 @@ begin
 			
 		if (write_to_cart_0)
 			adrs_monitor <= 1'b0;
-		if ((ioctl_index[5:0] == 6'd1) & ioctl_wr)
+		if ((ioctl_index[6:0] == 7'd11) & ioctl_wr)
 			adrs_monitor <= adrs_monitor | ioctl_addr[14];
 	end
 end
@@ -1870,7 +1916,7 @@ begin
 			else
 				cart_firq_enable <= SWITCH[4];
 
-		if ((ioctl_index[5:0] == 6'd1) & ioctl_wr)
+		if ((ioctl_index[6:0] == 7'd1) & ioctl_wr)
 		begin
 			firq_trig <= 1'b1;
 			firq_tmr <= 16'h0000;
@@ -1912,7 +1958,8 @@ end
 
 assign CART_INT_N = CART_INT_IN_N;
 assign VSYNC_INT_N = V_SYNC_N;
-assign HSYNC_INT_N = (H_SYNC_N | !H_FLAG);
+//assign HSYNC_INT_N = (H_SYNC_N | !H_FLAG);
+assign HSYNC_INT_N = H_SYNC_N;
 //assign TIMER_INT_N = ;
 assign KEY_INT_N = (KEYBOARD_IN == 8'hFF);
 
@@ -2597,30 +2644,63 @@ assign DE1TXD =		UART51_TXD;
 assign OPTTXD =		1'b0;
 
 // Timer
-assign TMR_CLK = !TIMER_INS	?	(!H_SYNC_N | !H_FLAG):
-											CLK3_57MHZ;					// 50 MHz / 14 = 3.57 MHz
-assign CLK3_57MHZ = DIV_14;
+//assign TMR_CLK = !TIMER_INS	?	(!H_SYNC_N | !H_FLAG):
+//											CLK3_57MHZ;					// 50 MHz / 14 = 3.57 MHz
+assign TMR_CLK = !TIMER_INS	?		!H_SYNC_N:
+									CLK3_57MHZ;					// 14.32Mhz... /4
+//assign CLK3_57MHZ = DIV_14;
+
+reg 	[1:0]	DIV_4;
+reg				CLK_14_D;
+
+
 always @ (negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
 	begin
-		DIV_7 <= 3'b000;
+		DIV_4 <= 2'b00;
+		CLK_14_D <= 1'b0;
+		CLK3_57MHZ <= 1'b0;
 		TMR_CLK_D <= 1'b0;
 	end
 	else
 	begin
+		CLK_14_D <= CLK_14;
 		TMR_CLK_D <= TMR_CLK;
-		case (DIV_7)
-		3'b110:
+		CLK3_57MHZ <= 1'b0;
+		
+		if ((CLK_14 == 1'b1) & (CLK_14_D == 1'b0))
 		begin
-			DIV_7 <= 3'b000;
-			DIV_14 <= !DIV_14;
-		end
-		default:
-			DIV_7 <= DIV_7 + 1'b1;
-		endcase
+			DIV_4 <= DIV_4 + 1'b1;
+			if (DIV_4 == 2'b11)
+				CLK3_57MHZ <= 1'b1;
+		end		
 	end
 end
+
+
+
+//always @ (negedge clk_sys or negedge RESET_N)
+//begin
+//	if(!RESET_N)
+//	begin
+//		DIV_7 <= 3'b000;
+//		TMR_CLK_D <= 1'b0;
+//	end
+//	else
+//	begin
+//		TMR_CLK_D <= TMR_CLK;
+//		case (DIV_7)
+//		3'b110:
+//		begin
+//			DIV_7 <= 3'b000;
+//			DIV_14 <= !DIV_14;
+//		end
+//		default:
+//			DIV_7 <= DIV_7 + 1'b1;
+//		endcase
+//	end
+//end
 
 always @(negedge clk_sys or negedge TMR_RST_N)
 begin
@@ -4128,7 +4208,6 @@ begin
 		RED[3:0] <= 4'B0000;
 		GREEN[3:0] <= 4'B0000;
 		BLUE[3:0] <= 4'B0000;
-		//VGA_BLANK_N <= 1'b1;
 		VGA_SYNC_N <= 1'b1;
 
 //  	Retrace Black
@@ -4490,7 +4569,7 @@ coco3_Char_ROM coco3_Char_ROM(
 	.CLK(clk_sys),
 	.ADDR_R({Font_ROM_Upper_Select, font_adrs}),
 	.ADDR_W(Font_ROM_Adrs_Buf),
-	.WE(((ioctl_index[5:0] == 6'd3) & ioctl_wr) | Font_ROM_Mach_WE), // Can be just Font_ROM_Mach_WE if no MISTer
+	.WE(((ioctl_index[5:0] == 7'd13) & ioctl_wr) | Font_ROM_Mach_WE), // Can be just Font_ROM_Mach_WE if no MISTer
     .DATA_R(font_data),
     .DATA_W(Font_ROM_Data_Buf)
 );
