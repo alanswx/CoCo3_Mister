@@ -192,10 +192,8 @@ assign VIDEO_ARY = (!ar) ? 12'd3 : 12'd0;
 localparam  CONF_STR = {
         "COCO3;;",
         "-;",
-        "FA,BIN,Load COCO ROMs (CB / ECB / DCB / Orch90);",
         "FD,BIN,Load COCO Font;",
 		  "-;",
-        //"OCD,Cart Slot,Orch 90,Large Disk Rom,Cart Load,Disk;",
         "OCD,Multi-Pak Slot,Orch 90,ECB / Cart,Disk;",
         "-;",
         "H2S0,DSK,Load Disk Drive 0;",

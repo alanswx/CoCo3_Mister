@@ -192,21 +192,21 @@ input	[1:0]		turbo_speed
 assign clk_Q_out = PH_2;
 assign cas_relay = CAS_MTR;
 
-//Analog Board
-parameter BOARD_TYPE = 8'h00;
 
-//Version 4 bits Major and 4 bits Minor
-parameter Version_Hi = 8'h40;
+//Version 5 bits Major and 4 bits Minor
+parameter Version_Hi = 8'h50;
 
-// High bit of lower nibble is Riser Type 0=Gary (or none) 1=Ed
-// Next three bits is Memory size 000=128K, 001=One Meg or 512K or 2M (DE2-115) 101=5 Meg
 
-		parameter Version_Lo = 8'h22;
-
+parameter Version_Lo = 8'h20;	// MiSTer
 // High nibble = DE1 		= '0000'
 // High nibble = DE2-115 	= '0001'
 // High nibble = MISTer 	= '0010'
+
+parameter BOARD_TYPE = 8'h01;	// No Riser - 2M
 // Low nibble is minor version
+// Analog Board
+// High bit of lower nibble is Riser Type 0=Gary (or none) 1=Ed
+// Next three bits is Memory size 000=128K, 001=One Meg or 512K or 2M (DE2-115) 101=5 Meg
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -976,15 +976,11 @@ localparam 	[1:0]	BOOT1 = 2'd1;
 localparam 	[1:0]	BOOT2 = 2'd2;
 
 localparam	[5:0]	BOOT  = 6'd0;
-localparam	[5:0]	OSD_ROM_LOAD  = 6'd10;
 
-wire			COCO3_ROM_BUNDLE = 		(ioctl_addr[24:15] == 10'b0000000000);
-wire			COCO3_DISKROM_BUNDLE = 	(ioctl_addr[24:13] == 12'b000000000100);
-wire			COCO3_ORCHROM_BUNDLE = 	(ioctl_addr[24:13] == 12'b000000000101);
 
-wire			COCO3_ROM_WRITE = ((ioctl_index[7:0] == {BOOT0, BOOT}) | ((ioctl_index[5:0] == OSD_ROM_LOAD) & COCO3_ROM_BUNDLE)) & ioctl_wr;
-wire			COCO3_DISKROM_WRITE = ((ioctl_index[7:0] == {BOOT1, BOOT}) | ((ioctl_index[5:0] == OSD_ROM_LOAD) & COCO3_DISKROM_BUNDLE)) & ioctl_wr;
-wire			COCO3_ORCH90_ROM_WRITE = ((ioctl_index[7:0] == {BOOT2, BOOT}) | ((ioctl_index[5:0] == OSD_ROM_LOAD) & COCO3_ORCHROM_BUNDLE)) & ioctl_wr;
+wire			COCO3_ROM_WRITE = (ioctl_index[7:0] == {BOOT0, BOOT})  & ioctl_wr;
+wire			COCO3_DISKROM_WRITE = (ioctl_index[7:0] == {BOOT1, BOOT}) & ioctl_wr;
+wire			COCO3_ORCH90_ROM_WRITE = (ioctl_index[7:0] == {BOOT2, BOOT}) & ioctl_wr;
 
 
 //COCO_ROM CC3_ROM(
