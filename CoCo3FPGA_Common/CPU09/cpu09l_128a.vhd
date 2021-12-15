@@ -4,7 +4,7 @@
 --                                                                           --
 --===========================================================================--
 --
--- File name      : cpu09l.vhd
+-- File name      : cpu09n.vhd
 --
 -- Entity name    : cpu09
 --
@@ -18,7 +18,7 @@
 --
 -- Author         : John E. Kent
 --
--- Email          : dilbert57@opencores.org
+-- Email          : dilbert57@opencores.org      
 --
 -- Web            : http://opencores.org/project,system09
 --
@@ -27,7 +27,7 @@
 --                  or a data read or write otherwise it is low indicating an idle
 --                  bus cycle.
 --                  IFETCH (instruction fetch output) is high whenever an
---                  instruction byte is read i.e. the program counter is applied
+--                  instruction byte is read i.e. the program counter is applied 
 --                  to the address bus.
 --                  LIC (last instruction cycle output) is normally low
 --                  but goes high on the last cycle of an instruction.
@@ -37,7 +37,7 @@
 --                  BS (bus status output) is normally low but goes high during an
 --                  interrupt or reset vector fetch or the processor is halted
 --                  i.e. a DMA grant.
---
+-- 
 --  Copyright (C) 2003 - 2010 John Kent
 --
 --  This program is free software: you can redistribute it and/or modify
@@ -67,9 +67,9 @@
 -- Fixed 16 bit indexed offset (was doing read rather than fetch)
 -- Added/Fixed STY and STS instructions.
 -- ORCC_STATE ANDed CC state rather than ORed it - Now fixed
--- CMPX Loaded ACCA and ACCB - Now fixed
+-- CMPX Loaded ACCA and ACCB - Now fixed 
 --
--- Version 1.0 - 6 Sep 2003 - John Kent
+-- Version 1.0 - 6 Sep 2003 - John Kent 
 -- Initial release to Open Cores
 -- reversed clock edge
 --
@@ -78,7 +78,7 @@
 -- ALU Right Mux now sign extends ACCA & ACCB offsets
 -- Absolute Indirect addressing performed a read on the
 -- second byte of the address rather than a fetch
--- so it formed an incorrect address. Now fixed.
+-- so it formed an incorrect address. Now fixed. 
 --
 -- Version 1.2 - 29 November 2003 John Kent
 -- LEAX and LEAY affect the Z bit only
@@ -91,9 +91,9 @@
 -- finding this fault.
 --
 -- Version 1.4 - 12 December 2003 John Kent
--- Missing cc_ctrl assignment in otherwise case of
+-- Missing cc_ctrl assignment in otherwise case of 
 -- lea_state resulted in cc_ctrl being latched in
--- that state.
+-- that state.	
 -- The otherwise statement should never be reached,
 -- and has been fixed simply to resolve synthesis warnings.
 --
@@ -121,15 +121,15 @@
 --
 --	Version 1.9 - 20 August 2005
 -- LSR8 is now handled in ASR8 and ROR8 case in the ALU,
--- rather than LSR16. There was a problem with single
+-- rather than LSR16. There was a problem with single 
 -- operand instructions using the MD register which is
 -- sign extended on the first 8 bit fetch.
 --
 -- Version 1.10 - 13 September 2005
 -- TFR & EXG instructions did not work for the Condition Code Register
--- An extra case has been added to the ALU for the alu_tfr control
+-- An extra case has been added to the ALU for the alu_tfr control 
 -- to assign the left ALU input (alu_left) to the condition code
--- outputs (cc_out).
+-- outputs (cc_out). 
 --
 -- Version 1.11 - 16 September 2005
 -- JSR ,X should not predecrement S before calculating the jump address.
@@ -139,7 +139,7 @@
 -- JSR_STATE. JSR_STATE in turn calls PUSH_RETURN_LO_STATE rather than
 -- PUSH_RETURN_HI_STATE so that both the High & Low halves of the PC are
 -- pushed on the stack. This adds one extra bus cycle, but resolves the
--- addressing conflict. I've also removed the pre-decement S in
+-- addressing conflict. I've also removed the pre-decement S in 
 -- JSR EXTENDED as it also calls JSR_STATE.
 --
 -- Version 1.12 - 6th June 2006
@@ -166,11 +166,11 @@
 -- Note that I don't wait for an interrupt to be asserted for
 -- three clock cycles.
 -- 4. Added new ALU control state "alu_mul". "alu_mul" is used in
--- the Multiply instruction replacing "alu_add16". This is similar
+-- the Multiply instruction replacing "alu_add16". This is similar 
 -- to "alu_add16" except it sets the Carry bit to B7 of the result
 -- in ACCB, sets the Zero bit if the 16 bit result is zero, but
 -- does not affect The Half carry (H), Negative (N) or Overflow (V)
--- flags. The logic was re-arranged so that it adds md or zero so
+-- flags. The logic was re-arranged so that it adds md or zero so 
 -- that the Carry condition code is set on zero multiplicands.
 -- 5. DAA (Decimal Adjust Accumulator) should set the Negative (N)
 -- and Zero Flags. It will also affect the Overflow (V) flag although
@@ -208,7 +208,7 @@
 -- added ba & bs (bus available & bus status) signals
 --
 -- Version 1.22 - 2011-10-29 John Kent
--- The halt state isn't correct.
+-- The halt state isn't correct. 
 -- The halt state is entered into from the fetch_state
 -- It returned to the fetch state which may re-run an execute cycle
 -- on the accumulator and it won't necessarily be the last instruction cycle
@@ -250,20 +250,32 @@
 -- Version 1.28 - 2015-05-30 John Kent.
 -- Moved IRQ and FIRQ test from state machine to the state sequencer Sync_state.
 --
--- Version 1.28a - Temporary tweaked release - 2018-02-08 DarFPGA
--- Add wait_cycles process to retrieve original cycle count for some (few) instructions.
--- Only those used by vectrex exec_rom (and spike rom) during drawing.
--- Beware that external hold (hold_in) is no more active.
+-- Version 1.29 - 2017-02-11 John Kent
+-- Make MUL 11 cycles long rather than 13 cycles.
+-- 1 fetch_state, 2 decode1_state, 
+-- 3 mul_state, 4 mulea_state, 5 muld_state
+-- 6 mul0_state, 7 mul1_state, 8 mul2_state, 9 mul3_state,
+-- 10 mul4_state, 11 mul5_state, 12 mul6_state, 13 mul7_state,
+-- move mul_state into decode1_state
+-- move mul7_state into fetch_state
 --
+-- Version 1.29 - 2017-03-08 John Kent.
+-- Moved LIC in ABX ?
+--
+-- Version 1.30 -2018-01-13 John Kent
+-- cpu09n.vhd
+-- replace decode1_state, decode2_state and decode3_state
+-- with the one decode_state.
+-- $10 $4F = $4F = CLRA on a real MC6809.
+-- $10 4F = CLRD on a HD6309
 --
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 
 entity cpu09 is
-	port (
+	port (	
 		clk      :	in std_logic;                     -- E clock input (falling edge)
-		ce       :	in std_logic;
 		rst      :  in std_logic;                     -- reset input (active high)
 		vma      : out std_logic;                     -- valid memory address (active high)
       lic_out  : out std_logic;                     -- last instruction cycle (active high)
@@ -278,7 +290,7 @@ entity cpu09 is
 		irq      :  in std_logic;                     -- interrupt request input (active high)
 		firq     :  in std_logic;                     -- fast interrupt request input (active high)
 		nmi      :  in std_logic;                     -- non maskable interrupt request input (active high)
-		halt     :  in std_logic;                      -- halt input (active high) grants DMA
+		halt     :  in std_logic;                     -- halt input (active high) grants DMA
 		hold     :  in std_logic                      -- hold input (active high) extend bus cycle
 		);
 end cpu09;
@@ -313,7 +325,7 @@ architecture rtl of cpu09 is
                        -- Fetch Instruction Cycle
                        fetch_state,
 							  -- Decode Instruction Cycles
-                       decode1_state, decode2_state, decode3_state,
+                       decode_state,
 							  -- Calculate Effective Address
 						     imm16_state,
 		                 indexed_state, index8_state, index16_state, index16_2_state,
@@ -329,17 +341,17 @@ architecture rtl of cpu09 is
 							  -- Dual op states
 							  dual_op_read8_state, dual_op_read16_state, dual_op_read16_2_state,
 						     dual_op_write8_state, dual_op_write16_state,
-                       --
+                       -- 
 						     sync_state, halt_state, cwai_state,
 							  --
 							  andcc_state, orcc_state,
-							  tfr_state,
+							  tfr_state, 
                        exg_state, exg1_state, exg2_state,
 							  lea_state,
 							  -- Multiplication
-						     mul_state, mulea_state, muld_state,
+						     mulea_state, muld_state,
 						     mul0_state, mul1_state, mul2_state, mul3_state,
-						     mul4_state, mul5_state, mul6_state, mul7_state,
+						     mul4_state, mul5_state, mul6_state,
 							  --  Branches
 							  lbranch_state, sbranch_state,
 							  -- Jumps, Subroutine Calls and Returns
@@ -358,8 +370,8 @@ architecture rtl of cpu09 is
 						     int_dp_state,
 				           int_accb_state, int_acca_state,
 						     int_cc_state,
-						     int_cwai_state,
-							  int_nmimask_state, int_firqmask_state, int_swimask_state, int_irqmask_state,
+						     int_cwai_state, 
+							  int_nmimask_state, int_firqmask_state, int_swimask_state, int_irqmask_state, 
 							  -- Return From Interrupt
 						     rti_cc_state,   rti_entire_state,
 							  rti_acca_state, rti_accb_state,
@@ -413,7 +425,7 @@ architecture rtl of cpu09 is
                        up_lo_dout, up_hi_dout, sp_lo_dout, sp_hi_dout,
                        pc_lo_dout, pc_hi_dout, md_lo_dout, md_hi_dout );
    type op_type    is (reset_op, fetch_op, latch_op );
-   type pre_type   is (reset_pre, fetch_pre, latch_pre );
+   type pre_type   is (reset_pre, fetch_pre, load_pre, latch_pre );
    type cc_type    is (reset_cc, load_cc, pull_cc, latch_cc );
    type acca_type  is (reset_acca, load_acca, load_hi_acca, pull_acca, latch_acca );
    type accb_type  is (reset_accb, load_accb, pull_accb, latch_accb );
@@ -431,7 +443,7 @@ architecture rtl of cpu09 is
 	type right_type is (ea_right, zero_right, one_right, two_right,
                        acca_right, accb_right, accd_right,
 							  md_right, md_sign5_right, md_sign8_right );
-   type alu_type   is (alu_add8, alu_sub8, alu_add16, alu_sub16, alu_adc, alu_sbc,
+   type alu_type   is (alu_add8, alu_sub8, alu_add16, alu_sub16, alu_adc, alu_sbc, 
                        alu_and, alu_ora, alu_eor,
                        alu_tst, alu_inc, alu_dec, alu_clr, alu_neg, alu_com,
 						     alu_lsr16, alu_lsl16,
@@ -472,7 +484,7 @@ architecture rtl of cpu09 is
 	signal st_ctrl:      st_type;
 	signal iv_ctrl:      iv_type;
    signal pc_ctrl:      pc_type;
-   signal ea_ctrl:      ea_type;
+   signal ea_ctrl:      ea_type; 
    signal op_ctrl:      op_type;
 	signal pre_ctrl:     pre_type;
 	signal md_ctrl:      md_type;
@@ -491,62 +503,28 @@ architecture rtl of cpu09 is
    signal dout_ctrl:    dout_type;
 
 
---	signal cnt_cycles : std_logic_vector(3 downto 0) := "0000" ;
---	signal hold : std_logic;
-
 begin
-
---wait_cycles: process(clk)
---begin
---  if clk'event and clk = '0' then
---		if ce = '1' then
---		 if lic = '1' then
---			case op_code is
---			when X"A6" => hold <= '1'; cnt_cycles <= X"1"; -- additional cycles for vectrex tuning
---			when X"97" => hold <= '1'; cnt_cycles <= X"1";
---			when X"8C" => hold <= '1'; cnt_cycles <= X"1";
---			when X"D7" => hold <= '1'; cnt_cycles <= X"1";
---			when X"1F" => hold <= '1'; cnt_cycles <= X"3";
---			when X"B3" => hold <= '1'; cnt_cycles <= X"2";
---			when X"0A" => hold <= '1'; cnt_cycles <= X"2";
---			when X"0C" => hold <= '1'; cnt_cycles <= X"2";
---			when X"1E" => hold <= '1'; cnt_cycles <= X"3";  -- exg @117A/7C spike (allow time enough for timer to end before pc=11A4)
---			when others=> null;
---			end case;
---		 end if;
-
---		 if hold = '1' then
---			if cnt_cycles = X"1" then
--- 			  hold <= '0';
---			end if;
---			cnt_cycles <= cnt_cycles - '1';
---		 end if;
---		end if;
---	end if;
---end process;
 
 ----------------------------------
 --
 -- State machine stack
 --
 ----------------------------------
---state_stack_proc: process( clk, hold, state_stack, st_ctrl,
+--state_stack_proc: process( clk, hold, state_stack, st_ctrl, 
 --                           return_state, fetch_state  )
 state_stack_proc: process( clk, st_ctrl, return_state )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
 	   case st_ctrl is
       when reset_st =>
         saved_state <= fetch_state;
       when push_st =>
-		  saved_state <= return_state;
+		  saved_state <= return_state; 
 		when others =>
         null;
  	   end case;
     end if;
-	end if;
   end if;
 end process;
 
@@ -559,7 +537,6 @@ end process;
 int_vec_proc: process( clk, iv_ctrl )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
       case iv_ctrl is
       when reset_iv =>
@@ -580,10 +557,9 @@ begin
 		  null;
       end case;
     end if; -- hold
-	end if;
   end if; -- clk
 end process;
-
+  
 ----------------------------------
 --
 -- Program Counter Control
@@ -594,7 +570,6 @@ end process;
 pc_reg: process( clk )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
     case pc_ctrl is
 	 when reset_pc =>
@@ -611,7 +586,6 @@ begin
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -626,7 +600,6 @@ ea_reg: process( clk )
 begin
 
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold= '0' then
     case ea_ctrl is
 	 when reset_ea =>
@@ -643,7 +616,6 @@ begin
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -656,7 +628,6 @@ end process;
 acca_reg : process( clk )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
     case acca_ctrl is
     when reset_acca =>
@@ -671,7 +642,6 @@ begin
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -684,7 +654,6 @@ end process;
 accb_reg : process( clk )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
     case accb_ctrl is
     when reset_accb =>
@@ -697,7 +666,6 @@ begin
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -710,7 +678,6 @@ end process;
 ix_reg : process( clk )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
     case ix_ctrl is
     when reset_ix =>
@@ -725,7 +692,6 @@ begin
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -738,7 +704,6 @@ end process;
 iy_reg : process( clk )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
     case iy_ctrl is
     when reset_iy =>
@@ -753,7 +718,6 @@ begin
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -766,7 +730,6 @@ end process;
 sp_reg : process( clk )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
     case sp_ctrl is
     when reset_sp =>
@@ -784,7 +747,6 @@ begin
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -797,7 +759,6 @@ end process;
 up_reg : process( clk )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
     case up_ctrl is
     when reset_up =>
@@ -812,7 +773,6 @@ begin
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -825,7 +785,6 @@ end process;
 md_reg : process( clk )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
     case md_ctrl is
     when reset_md =>
@@ -846,7 +805,6 @@ begin
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -861,7 +819,6 @@ end process;
 cc_reg: process( clk )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
     case cc_ctrl is
 	 when reset_cc =>
@@ -874,7 +831,6 @@ begin
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -888,7 +844,6 @@ end process;
 dp_reg: process( clk )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
     case dp_ctrl is
 	 when reset_dp =>
@@ -901,7 +856,6 @@ begin
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -916,7 +870,6 @@ end process;
 op_reg: process( clk )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
     case op_ctrl is
 	 when reset_op =>
@@ -927,7 +880,6 @@ begin
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -942,18 +894,18 @@ end process;
 pre_reg: process( clk )
 begin
   if clk'event and clk = '0' then
-	if ce = '1' then
     if hold = '0' then
     case pre_ctrl is
 	 when reset_pre =>
 	   pre_code <= (others=>'0');
   	 when fetch_pre =>
       pre_code <= data_in;
+    when load_pre =>
+		pre_code <= op_code;
 	 when others =>
       null;
     end case;
 	 end if;
-	end if;
   end if;
 end process;
 
@@ -967,13 +919,11 @@ end process;
 change_state: process( clk )
 begin
   if clk'event and clk = '0' then
-
     if rst = '1' then
       fic     <= '0';
 	   nmi_ack <= '0';
  	   state   <= reset_state;
-    elsif ce = '1' and hold = '0' then
-
+    elsif hold = '0' then
 		  fic <= lic;
 		  --
 		  -- nmi request is not cleared until nmi input goes low
@@ -981,15 +931,15 @@ begin
 		  if (nmi_req = '0') and (nmi_ack='1') then
           nmi_ack <= '0';
 		  end if;
-
+		  
 		  if (nmi_req = '1') and (nmi_ack = '0')  and (state = int_nmimask_state) then
           nmi_ack <= '1';
 		  end if;
 
-        if lic = '1' then
+        if lic = '1'  then
           if halt = '1' then
 			   state <= halt_state;
-
+				
           -- service non maskable interrupts
           elsif (nmi_req = '1') and (nmi_ack = '0') then
 			   state <= int_nmi_state;
@@ -1021,7 +971,7 @@ begin
 	 end if; -- reset/hold
   end if; -- clk
 end process;
-
+	
 ------------------------------------
 --
 -- Detect Edge of NMI interrupt
@@ -1034,7 +984,6 @@ begin
   if rst='1' then
 	 nmi_req <= '0';
   elsif clk'event and clk='0' then
-	if ce = '1' then
 	   if (nmi='1') and (nmi_ack='0') and (nmi_enable='1') then
 	     nmi_req <= '1';
 	   else
@@ -1042,7 +991,6 @@ begin
 	       nmi_req <= '0';
 		  end if;
 		end if;
-	end if;
   end if;
 end process;
 
@@ -1274,10 +1222,10 @@ begin
   --    1    0   0   1 60
   --    1    0   0   0 66
   --
-  -- 66 = (!VHI & !VLO) + (CBIT & HBIT) + (HBIT & !VHI) + (CBIT & !VLO)
+  -- 66 = (!VHI & !VLO) + (CBIT & HBIT) + (HBIT & !VHI) + (CBIT & !VLO) 
   --    = (CBIT & (HBIT + !VLO)) + (!VHI & (HBIT + !VLO))
   --    = (!VLO & (CBIT + !VHI)) + (HBIT & (CBIT + !VHI))
-  -- 60 = (CBIT & !HBIT & VLO) + (!HBIT & !VHI & VLO)
+  -- 60 = (CBIT & !HBIT & VLO) + (!HBIT & !VHI & VLO) 
   --    = (!HBIT & VLO & (CBIT + !VHI))
   -- 06 = (!CBIT & VHI & (!VLO + VHI)
   -- 00 = (!CBIT & !HBIT & VHI & VLO)
@@ -1435,7 +1383,7 @@ begin
   	 when alu_add8 | alu_sub8 |
 	      alu_adc | alu_sbc |
   	      alu_and | alu_ora | alu_eor |
-  	      alu_inc | alu_dec |
+  	      alu_inc | alu_dec | 
 			alu_neg | alu_com | alu_clr |
 			alu_rol8 | alu_ror8 | alu_asr8 | alu_asl8 | alu_lsr8 |
 		   alu_ld8  | alu_st8 | alu_sex | alu_daa =>
@@ -1505,7 +1453,7 @@ begin
     case alu_ctrl is
   	 when alu_add8 | alu_adc =>
       cc_out(HBIT) <= (left(3) and right(3)) or
-                     (right(3) and not out_alu(3)) or
+                     (right(3) and not out_alu(3)) or 
                       (left(3) and not out_alu(3));
   	 when alu_andcc =>
       cc_out(HBIT) <= left(HBIT) and cc(HBIT);
@@ -1609,8 +1557,8 @@ end process;
 -- state sequencer
 --
 ------------------------------------
-process( state, saved_state,
-         op_code, pre_code,
+process( state, saved_state, 
+         op_code, pre_code, 
 			cc, ea, md, iv, fic, halt,
          nmi_req, firq, irq, lic )
 variable cond_true : boolean;  -- variable used to evaluate coditional branches
@@ -1714,14 +1662,14 @@ begin
     addr_ctrl  <= fetch_ad;
     -- Advance the PC to fetch next instruction byte
     pc_ctrl    <= incr_pc;
-    next_state <= decode1_state;
+    next_state <= decode_state;
 
   --
   -- Here to decode instruction
   -- and fetch next byte of intruction
   -- whether it be necessary or not
   --
-  when decode1_state =>
+  when decode_state =>
 	-- fetch first byte of address or immediate data
     ea_ctrl    <= fetch_first_ea;
     md_ctrl    <= fetch_first_md;
@@ -1744,7 +1692,7 @@ begin
     -- 2 ea_hi=dp / ea_lo=(pc) / pc=pc+1
     -- 3 pc=ea
                --
-	when "0000" =>
+	when "0000" => 
       -- advance the PC
       pc_ctrl    <= incr_pc;
 
@@ -1757,7 +1705,7 @@ begin
 
       when others =>
         next_state <= single_op_read_state;
-
+ 
       end case;
 
     -- acca / accb inherent instructions
@@ -1771,9 +1719,10 @@ begin
       when "0000" => -- page2
         opfetch    <= '1';
         op_ctrl    <= fetch_op;
+		  pre_ctrl   <= load_pre;
         -- advance pc
         pc_ctrl    <= incr_pc;
-        next_state <= decode2_state;
+        next_state <= decode_state;
 
       --
       -- Page3 pre byte
@@ -1783,9 +1732,10 @@ begin
       when "0001" => -- page3
         opfetch    <= '1';
         op_ctrl    <= fetch_op;
+		  pre_ctrl   <= load_pre;
         -- advance pc
         pc_ctrl    <= incr_pc;
-        next_state <= decode3_state;
+        next_state <= decode_state;
 
       --
       -- nop - No operation ( 1 byte )
@@ -1793,7 +1743,7 @@ begin
       -- cpu09 => 2 cycles
       -- 1 op=(pc) / pc=pc+1
       -- 2 decode
-      --
+      -- 
       when "0010" => -- nop
         lic          <= '1';
         next_state   <= fetch_state;
@@ -1801,7 +1751,7 @@ begin
       --
       -- sync - halt execution until an interrupt is received
       -- interrupt may be NMI, IRQ or FIRQ
-      -- program execution continues if the
+      -- program execution continues if the 
       -- interrupt is asserted for 3 clock cycles
       -- note that registers are not pushed onto the stack
       -- CPU09 => Interrupts need only be asserted for one clock cycle
@@ -1907,19 +1857,38 @@ begin
         next_state <= fetch_state;
       end case;
 
-    --
-    -- Short branch conditional
-    -- 6809 => always 3 cycles
-    -- cpu09 => always = 3 cycles
-    -- 1 op=(pc) / pc=pc+1
-    -- 2 md_hi=sign(pc) / md_lo=(pc) / pc=pc+1 / test cc
-    -- 3 if cc tru pc=pc+md else pc=pc
-    --
+	 --
+	 -- conditional branch
+	 --
     when "0010" => -- branch conditional
       -- increment the pc
       pc_ctrl    <= incr_pc;
-      next_state <= sbranch_state;
-
+		case pre_code is
+		when "00010000" => -- page 2
+			--
+			-- lbcc -- long branch conditional
+			-- 6809 => branch 6 cycles, no branch 5 cycles
+			-- cpu09 => always 5 cycles
+			-- 1 pre=(pc) / pc=pc+1
+			-- 2 op=(pc) / pc=pc+1
+			-- 3 md_hi=sign(pc) / md_lo=(pc) / pc=pc+1
+         -- 4 md_hi=md_lo / md_lo=(pc) / pc=pc+1
+			-- 5 if cond pc=pc+md else pc=pc
+			--
+			next_state <= lbranch_state;
+			
+		when others => -- page 1
+			--
+			-- Short branch conditional
+			-- 6809 => always 3 cycles
+			-- cpu09 => always = 3 cycles
+			-- 1 op=(pc) / pc=pc+1
+			-- 2 md_hi=sign(pc) / md_lo=(pc) / pc=pc+1 / test cc
+			-- 3 if cc tru pc=pc+md else pc=pc
+			--
+			next_state <= sbranch_state;
+		end case;
+		
     --
     -- Single byte stack operators
     -- Do not advance PC
@@ -1950,7 +1919,7 @@ begin
       -- 6809 => 5 cycles + registers
       -- cpu09 => 3 cycles + registers
       --  1 op=(pc) / pc=pc+1
-      --  2 ea_lo=(pc) / pc=pc+1
+      --  2 ea_lo=(pc) / pc=pc+1 
       --  3 if ea(7 downto 0) != "00000000" then sp=sp-1
       --  4 if ea(7) = 1 (sp)=pcl, sp=sp-1
       --  5 if ea(7) = 1 (sp)=pch
@@ -1996,7 +1965,7 @@ begin
         -- advance PC
         pc_ctrl    <= incr_pc;
         next_state <= pshu_state;
-
+        
       --
       -- pulu - pull registers of up stack
       -- 6809 => 5 cycles + registers
@@ -2010,7 +1979,7 @@ begin
       --
       -- rts - return from subroutine
       -- 6809 => 5 cycles
-      -- cpu09 => 4 cycles
+      -- cpu09 => 4 cycles 
       -- 1 op=(pc) / pc=pc+1
       -- 2 decode op
       -- 3 pc_hi = (sp) / sp=sp+1
@@ -2029,11 +1998,11 @@ begin
       -- 2 alu_left=ix / alu_right=accb / ix=alu_out / pc=pc
       --
       when "1010" => -- abx
-        lic          <= '1';
         left_ctrl    <= ix_left;
         right_ctrl   <= accb_right;
         alu_ctrl     <= alu_abx;
         ix_ctrl      <= load_ix;
+        lic          <= '1';
         next_state   <= fetch_state;
 
       --
@@ -2059,10 +2028,16 @@ begin
       -- MUL Multiply
       --
       when "1101" => -- mul
-        next_state   <= mul_state;
-
+			-- move acca to md
+         left_ctrl  <= acca_left;
+         right_ctrl <= zero_right;
+         alu_ctrl   <= alu_st16;
+         md_ctrl    <= load_md; -- over ride md_ctrl <= second byte fetch 
+			next_state <= mulea_state;
+			
       --
       -- SWI Software Interrupt
+		-- Do not advance PC
       --
       when "1111" => -- swi
         -- predecrement SP
@@ -2070,9 +2045,21 @@ begin
         right_ctrl   <= one_right;
         alu_ctrl     <= alu_sub16;
         sp_ctrl      <= load_sp;
-        iv_ctrl      <= swi_iv;
         st_ctrl      <= push_st;
-        return_state <= int_swimask_state;
+		  case pre_code is
+		  when "00010000" => -- page 2
+				iv_ctrl      <= swi2_iv;
+				return_state <= vect_hi_state;
+				
+		  when "00010001" => -- page 3
+			   iv_ctrl 	<= swi3_iv;
+				return_state <= vect_hi_state;
+				
+		  when others => -- page 1
+				iv_ctrl  <= swi_iv;
+				return_state <= int_swimask_state;
+				
+		  end case;
         next_state   <= int_entire_state;
 
       when others =>
@@ -2090,17 +2077,17 @@ begin
     -- Note that there is no post byte
     -- so do not advance PC in decode cycle
     -- Re-run opcode fetch cycle after decode
-    --
+    -- 
     when "0100" => -- acca single op
       left_ctrl  <= acca_left;
       case op_code(3 downto 0) is
-
+ 
       when "0000" => -- neg
         right_ctrl <= zero_right;
         alu_ctrl   <= alu_neg;
         acca_ctrl  <= load_acca;
         cc_ctrl    <= load_cc;
-
+ 
       when "0011" => -- com
         right_ctrl <= zero_right;
         alu_ctrl   <= alu_com;
@@ -2289,10 +2276,10 @@ begin
     -- EA should hold index offset
     --
     when "0110" => -- indexed single op
-      -- increment the pc
+      -- increment the pc 
       pc_ctrl    <= incr_pc;
       st_ctrl    <= push_st;
-
+ 
       case op_code(3 downto 0) is
       when "1110" => -- jmp
         return_state <= jmp_state;
@@ -2319,13 +2306,13 @@ begin
       case op_code(3 downto 0) is
       when "1110" => -- jmp
         return_state <= jmp_state;
-
+  
       when "1111" => -- clr
         return_state <= single_op_exec_state;
-
+  
       when others =>
         return_state <= single_op_read_state;
-
+       
       end case;
       next_state <= extended_state;
 
@@ -2334,10 +2321,10 @@ begin
       pc_ctrl    <= incr_pc;
 
       case op_code(3 downto 0) is
-      when "0011" | -- subd #
-           "1100" | -- cmpx #
-           "1110" => -- ldx #
-        next_state   <= imm16_state;
+      when "0011" | -- subd #, cmpd #, cmpu #
+           "1100" | -- cmpx #, cmpy #, cmps #
+           "1110" => -- ldx #,  ldy #, undef #
+			  next_state   <= imm16_state;
 
       --
       -- bsr offset - Branch to subroutine (2 bytes)
@@ -2370,9 +2357,9 @@ begin
       -- increment the pc
       pc_ctrl    <= incr_pc;
       case op_code(3 downto 0) is
-      when "0011" | -- subd
-           "1100" | -- cmpx
-           "1110" => -- ldx
+      when "0011" | -- subd <,  cmpd <, cmpu <
+           "1100" | -- cmpx <,  cmpy <, cmps <
+           "1110" => -- ldx <,   ldy <, undef <
         next_state   <= dual_op_read16_state;
 
       when "0111" =>  -- sta direct
@@ -2400,7 +2387,7 @@ begin
         next_state   <= push_return_lo_state;
 
 
-      when "1111" => -- stx direct
+      when "1111" => -- stx <, sty <, undef <
         -- idle ALU
         left_ctrl  <= ix_left;
         right_ctrl <= zero_right;
@@ -2418,13 +2405,13 @@ begin
       -- increment the pc
       pc_ctrl    <= incr_pc;
       case op_code(3 downto 0) is
-      when "0011" | -- subd
-           "1100" | -- cmpx
-           "1110" => -- ldx
+      when "0011" | -- subd x, cmpd x, cmpu x
+           "1100" | -- cmpx x, cmpy x. cmps ,x
+           "1110" => -- ldx x,  ldy x, undef x
         st_ctrl      <= push_st;
         return_state <= dual_op_read16_state;
         next_state   <= indexed_state;
-
+		  
       when "0111" =>  -- staa ,x
         st_ctrl      <= push_st;
         return_state <= dual_op_write8_state;
@@ -2436,7 +2423,7 @@ begin
         return_state <= jsr_state;
         next_state   <= indexed_state;
 
-      when "1111" => -- stx ,x
+      when "1111" => -- stx ind, sty ind
         st_ctrl      <= push_st;
         return_state <= dual_op_write16_state;
         next_state   <= indexed_state;
@@ -2445,16 +2432,16 @@ begin
         st_ctrl      <= push_st;
         return_state <= dual_op_read8_state;
         next_state   <= indexed_state;
-
+ 
       end case;
 
    when "1011" => -- acca extended
      -- increment the pc
      pc_ctrl    <= incr_pc;
      case op_code(3 downto 0) is
-     when "0011" | -- subd
-          "1100" | -- cmpx
-          "1110" => -- ldx
+     when "0011" | -- subd >, cmpd >, cmpu >
+          "1100" | -- cmpx >, cmpy >, cmps >
+          "1110" => -- ldx >   ldy >, undef >
        st_ctrl      <= push_st;
        return_state <= dual_op_read16_state;
        next_state   <= extended_state;
@@ -2470,7 +2457,7 @@ begin
        return_state <= jsr_state;
        next_state   <= extended_state;
 
-     when "1111" => -- stx >
+     when "1111" => -- stx >, sty >
        st_ctrl      <= push_st;
        return_state <= dual_op_write16_state;
        next_state   <= extended_state;
@@ -2486,9 +2473,9 @@ begin
      -- increment the pc
      pc_ctrl    <= incr_pc;
      case op_code(3 downto 0) is
-     when "0011" | -- addd #
-          "1100" | -- ldd #
-          "1110" => -- ldu #
+     when "0011" | -- addd #, undef #, undef #
+          "1100" | -- ldd #, undef #, undef #
+          "1110" => -- ldu #, lds #, undef #
        next_state   <= imm16_state;
 
      when others =>
@@ -2501,18 +2488,18 @@ begin
      -- increment the pc
      pc_ctrl    <= incr_pc;
      case op_code(3 downto 0) is
-     when "0011" | -- addd
-          "1100" | -- ldd
-          "1110" => -- ldu
+     when "0011" | -- addd <, undef <, undef <
+          "1100" | -- ldd <, undef <, undef <
+          "1110" => -- ldu, lds <, undef <
        next_state   <= dual_op_read16_state;
 
-     when "0111" =>  -- stab direct
+     when "0111" =>  -- stab <
        next_state   <= dual_op_write8_state;
 
-     when "1101" =>  -- std direct
+     when "1101" =>  -- std <,
        next_state   <= dual_op_write16_state;
 
-     when "1111" => -- stu direct
+     when "1111" => -- stu <, sts <
        next_state   <= dual_op_write16_state;
 
      when others =>
@@ -2524,24 +2511,24 @@ begin
      -- increment the pc
      pc_ctrl    <= incr_pc;
      case op_code(3 downto 0) is
-     when "0011" | -- addd
-          "1100" | -- ldd
-          "1110" => -- ldu
+     when "0011" | -- addd x, undef x, undef x
+          "1100" | -- ldd x, undef x, undef x
+          "1110" => -- ldu x, lds x, undef x
        st_ctrl      <= push_st;
        return_state <= dual_op_read16_state;
        next_state   <= indexed_state;
 
-     when "0111" =>  -- stab indexed
+     when "0111" =>  -- stab x
        st_ctrl      <= push_st;
        return_state <= dual_op_write8_state;
        next_state   <= indexed_state;
 
-     when "1101" =>  -- std indexed
+     when "1101" =>  -- std x
        st_ctrl      <= push_st;
        return_state <= dual_op_write16_state;
        next_state   <= indexed_state;
 
-     when "1111" => -- stu indexed
+     when "1111" => -- stu x, sts x, undef x
        st_ctrl      <= push_st;
        return_state <= dual_op_write16_state;
        next_state   <= indexed_state;
@@ -2550,16 +2537,16 @@ begin
        st_ctrl      <= push_st;
        return_state <= dual_op_read8_state;
        next_state   <= indexed_state;
-
+ 
      end case;
 
    when "1111" => -- accb extended
      -- increment the pc
      pc_ctrl    <= incr_pc;
      case op_code(3 downto 0) is
-     when "0011" | -- addd
-		    "1100" | -- ldd
-	       "1110" => -- ldu
+     when "0011" | -- addd >, undef >, undef >
+		    "1100" | -- ldd >, undef >, undef >
+	       "1110" => -- ldu >, lds >, undef >
 	    st_ctrl      <= push_st;
 	    return_state <= dual_op_read16_state;
        next_state   <= extended_state;
@@ -2586,311 +2573,12 @@ begin
      end case;
 	--
    -- not sure why I need this
-   --
+   --	
    when others =>
 	  lic <= '1';
 	  next_state <= fetch_state;
 	end case;
 
-			 --
-			 -- Here to decode prefix 2 instruction
-			 -- and fetch next byte of intruction
-			 -- whether it be necessary or not
-			 --
-          when decode2_state =>
-				 -- fetch first byte of address or immediate data
-             ea_ctrl    <= fetch_first_ea;
-				 md_ctrl    <= fetch_first_md;
-             addr_ctrl  <= fetch_ad;
-			    case op_code(7 downto 4) is
-				 --
-				 -- lbcc -- long branch conditional
-				 -- 6809 => branch 6 cycles, no branch 5 cycles
-				 -- cpu09 => always 5 cycles
-				 -- 1 pre=(pc) / pc=pc+1
-				 -- 2 op=(pc) / pc=pc+1
-				 -- 3 md_hi=sign(pc) / md_lo=(pc) / pc=pc+1
-             -- 4 md_hi=md_lo / md_lo=(pc) / pc=pc+1
-				 -- 5 if cond pc=pc+md else pc=pc
-				 --
-	          when "0010" =>
-					-- increment the pc
-               pc_ctrl    <= incr_pc;
-					next_state <= lbranch_state;
-
-				 --
-				 -- Single byte stack operators
-				 -- Do not advance PC
-				 --
-	          when "0011" =>
-	            case op_code(3 downto 0) is
-		         when "1111" => -- swi 2
-					   -- predecrement sp
-		            left_ctrl    <= sp_left;
-		            right_ctrl   <= one_right;
-						alu_ctrl     <= alu_sub16;
-						sp_ctrl      <= load_sp;
-						iv_ctrl      <= swi2_iv;
-						st_ctrl      <= push_st;
-						return_state <= vect_hi_state;
-						next_state   <= int_entire_state;
-
-		         when others =>
-                 lic          <= '1';
-					  next_state   <= fetch_state;
-		         end case;
-
-	          when "1000" => -- acca immediate
-				   -- increment the pc
-               pc_ctrl    <= incr_pc;
-					case op_code(3 downto 0) is
-               when "0011" | -- cmpd #
-					     "1100" | -- cmpy #
-					     "1110" => -- ldy #
-					  next_state   <= imm16_state;
-
-					when others =>
-                 lic          <= '1';
-				     next_state   <= fetch_state;
-
-               end case;
-
-	          when "1001" => -- acca direct
-					-- increment the pc
-               pc_ctrl    <= incr_pc;
-					case op_code(3 downto 0) is
-               when "0011" | -- cmpd <
-					     "1100" | -- cmpy <
-					     "1110" => -- ldy <
-					  next_state   <= dual_op_read16_state;
-
-					when "1111" => -- sty <
-				     next_state   <= dual_op_write16_state;
-
-					when others =>
-                 lic          <= '1';
-				     next_state   <= fetch_state;
-
-               end case;
-
-	          when "1010" => -- acca indexed
-					-- increment the pc
-               pc_ctrl    <= incr_pc;
-					case op_code(3 downto 0) is
-               when "0011" | -- cmpd ,ind
-					     "1100" | -- cmpy ,ind
-					     "1110" => -- ldy ,ind
-				     st_ctrl      <= push_st;
-				     return_state <= dual_op_read16_state;
-					  next_state   <= indexed_state;
-
-					when "1111" => -- sty ,ind
-				     st_ctrl      <= push_st;
-				     return_state <= dual_op_write16_state;
-				     next_state   <= indexed_state;
-
-					when others =>
-                 lic          <= '1';
-				     next_state   <= fetch_state;
-               end case;
-
-             when "1011" => -- acca extended
-					-- increment the pc
-               pc_ctrl    <= incr_pc;
-					case op_code(3 downto 0) is
-               when "0011" | -- cmpd <
-					     "1100" | -- cmpy <
-					     "1110" => -- ldy <
-				     st_ctrl      <= push_st;
-				     return_state <= dual_op_read16_state;
-					  next_state   <= extended_state;
-
-					when "1111" => -- sty >
-				     st_ctrl      <= push_st;
-				     return_state <= dual_op_write16_state;
-				     next_state   <= extended_state;
-
-					when others =>
-                 lic          <= '1';
-				     next_state   <= fetch_state;
-
-               end case;
-
-	          when "1100" => -- accb immediate
-					-- increment the pc
-               pc_ctrl    <= incr_pc;
-					case op_code(3 downto 0) is
-               when "0011" | -- undef #
-					     "1100" | -- undef #
-					     "1110" => -- lds #
-					  next_state   <= imm16_state;
-
-					when others =>
-				     next_state   <= fetch_state;
-
-               end case;
-
-	          when "1101" => -- accb direct
-					-- increment the pc
-               pc_ctrl    <= incr_pc;
-					case op_code(3 downto 0) is
-               when "0011" | -- undef <
-					     "1100" | -- undef <
-					     "1110" => -- lds <
-					  next_state   <= dual_op_read16_state;
-
-					when "1111" => -- sts <
-				     next_state   <= dual_op_write16_state;
-
-					when others =>
-                 lic          <= '1';
-				     next_state   <= fetch_state;
-
-               end case;
-
-	          when "1110" => -- accb indexed
-					-- increment the pc
-               pc_ctrl    <= incr_pc;
-					case op_code(3 downto 0) is
-               when "0011" | -- undef ,ind
-					     "1100" | -- undef ,ind
-					     "1110" => -- lds ,ind
-				     st_ctrl      <= push_st;
-				     return_state <= dual_op_read16_state;
-					  next_state   <= indexed_state;
-
-					when "1111" => -- sts ,ind
-				     st_ctrl      <= push_st;
-				     return_state <= dual_op_write16_state;
-				     next_state   <= indexed_state;
-
-					when others =>
-                 lic          <= '1';
-				     next_state   <= fetch_state;
-
-               end case;
-
-             when "1111" => -- accb extended
-					-- increment the pc
-               pc_ctrl    <= incr_pc;
-					case op_code(3 downto 0) is
-               when "0011" | -- undef >
-					     "1100" | -- undef >
-					     "1110" => -- lds >
-				     st_ctrl      <= push_st;
-				     return_state <= dual_op_read16_state;
-					  next_state   <= extended_state;
-
-					when "1111" => -- sts >
-				     st_ctrl      <= push_st;
-				     return_state <= dual_op_write16_state;
-				     next_state   <= extended_state;
-
-					when others =>
-                 lic          <= '1';
-				     next_state   <= fetch_state;
-               end case;
-
-	          when others =>
-               lic          <= '1';
- 		         next_state   <= fetch_state;
-             end case;
-			 --
-			 -- Here to decode instruction
-			 -- and fetch next byte of intruction
-			 -- whether it be necessary or not
-			 --
-          when decode3_state =>
-             ea_ctrl    <= fetch_first_ea;
-				 md_ctrl    <= fetch_first_md;
-             addr_ctrl  <= fetch_ad;
-             dout_ctrl  <= md_lo_dout;
-			    case op_code(7 downto 4) is
-				 --
-				 -- Single byte stack operators
-				 -- Do not advance PC
-				 --
-	          when "0011" =>
-	            case op_code(3 downto 0) is
-		         when "1111" => -- swi3
-					   -- predecrement sp
-		            left_ctrl    <= sp_left;
-		            right_ctrl   <= one_right;
-						alu_ctrl     <= alu_sub16;
-						sp_ctrl      <= load_sp;
-						iv_ctrl      <= swi3_iv;
-						st_ctrl      <= push_st;
-						return_state <= vect_hi_state;
-						next_state   <= int_entire_state;
-		         when others =>
-                 lic          <= '1';
-					  next_state   <= fetch_state;
-		         end case;
-
-	          when "1000" => -- acca immediate
-				   -- increment the pc
-               pc_ctrl    <= incr_pc;
-					case op_code(3 downto 0) is
-               when "0011" | -- cmpu #
-					     "1100" | -- cmps #
-					     "1110" => -- undef #
-					  next_state   <= imm16_state;
-					when others =>
-                 lic          <= '1';
-				     next_state   <= fetch_state;
-               end case;
-
-	          when "1001" => -- acca direct
-					-- increment the pc
-               pc_ctrl    <= incr_pc;
-					case op_code(3 downto 0) is
-               when "0011" | -- cmpu <
-					     "1100" | -- cmps <
-					     "1110" => -- undef <
-					  next_state   <= dual_op_read16_state;
-
-					when others =>
-                 lic          <= '1';
-				     next_state   <= fetch_state;
-
-               end case;
-
-	          when "1010" => -- acca indexed
-					-- increment the pc
-               pc_ctrl    <= incr_pc;
-					case op_code(3 downto 0) is
-               when "0011" | -- cmpu ,X
-					     "1100" | -- cmps ,X
-					     "1110" => -- undef ,X
-				     st_ctrl      <= push_st;
-				     return_state <= dual_op_read16_state;
-					  next_state   <= indexed_state;
-
-					when others =>
-                 lic          <= '1';
-				     next_state   <= fetch_state;
-
-               end case;
-
-             when "1011" => -- acca extended
-					-- increment the pc
-               pc_ctrl    <= incr_pc;
-					case op_code(3 downto 0) is
-               when "0011" | -- cmpu >
-					     "1100" | -- cmps >
-					     "1110" => -- undef >
-				     st_ctrl      <= push_st;
-				     return_state <= dual_op_read16_state;
-					  next_state   <= extended_state;
-					when others =>
-                 lic          <= '1';
-				     next_state   <= fetch_state;
-               end case;
-
-	          when others =>
-               lic          <= '1';
- 		         next_state   <= fetch_state;
-             end case;
 
            --
 			  -- here if ea holds low byte
@@ -3119,7 +2807,7 @@ begin
 					when others =>
                  dout_ctrl  <= md_lo_dout;
 					end case;
-             else
+             else               
 				   case op_code(3 downto 0) is
 					when "0111" => -- stb
                  dout_ctrl  <= accb_dout;
@@ -3756,7 +3444,7 @@ begin
 				 -- here to execute conditional branch
 				 -- short conditional branch md = signed 8 bit offset
 				 -- long branch md = 16 bit offset
-				 --
+				 -- 
 	          when sbranch_state =>
                left_ctrl  <= pc_left;
 					right_ctrl <= md_right;
@@ -4063,14 +3751,6 @@ begin
                  lic          <= '1';
 				     next_state   <= fetch_state;
 
-				 when mul_state =>
-					  -- move acca to md
-                 left_ctrl  <= acca_left;
-                 right_ctrl <= zero_right;
-                 alu_ctrl   <= alu_st16;
-                 md_ctrl    <= load_md;
-				     next_state <= mulea_state;
-
 				 when mulea_state =>
 					  -- move accb to ea
                  left_ctrl  <= accb_left;
@@ -4191,22 +3871,7 @@ begin
                  acca_ctrl  <= load_hi_acca;
                  accb_ctrl  <= load_accb;
                  md_ctrl    <= shiftl_md;
-				     next_state <= mul7_state;
-
-				 when mul7_state =>
-					  -- if bit 7 of ea set, add accd to md
-                 left_ctrl  <= accd_left;
-					  if ea(7) = '1' then
-                   right_ctrl <= md_right;
-					  else
-                   right_ctrl <= zero_right;
-					  end if;
-                 alu_ctrl   <= alu_mul;
-                 cc_ctrl    <= load_cc;
-                 acca_ctrl  <= load_hi_acca;
-                 accb_ctrl  <= load_accb;
-                 md_ctrl    <= shiftl_md;
-                 lic          <= '1';
+                 lic        <= '1';
 				     next_state <= fetch_state;
 
 			  --
@@ -4220,7 +3885,7 @@ begin
              alu_ctrl   <= alu_sub16;
 				 -- idle	address
              addr_ctrl  <= idle_ad;
-			    dout_ctrl  <= cc_dout;
+			    dout_ctrl  <= cc_dout; 
 				 if ea(7 downto 0) = "00000000" then
                sp_ctrl    <= latch_sp;
 				 else
@@ -4255,7 +3920,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write pc low
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= pc_lo_dout;
+			    dout_ctrl  <= pc_lo_dout; 
              next_state <= pshs_pch_state;
 
 			  when pshs_pch_state =>
@@ -4270,7 +3935,7 @@ begin
 				 end if;
 				 -- write pc hi
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= pc_hi_dout;
+			    dout_ctrl  <= pc_hi_dout; 
 				 if ea(6) = '1' then
                next_state <= pshs_upl_state;
 				 elsif ea(5) = '1' then
@@ -4299,7 +3964,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write pc low
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= up_lo_dout;
+			    dout_ctrl  <= up_lo_dout; 
              next_state <= pshs_uph_state;
 
 			  when pshs_uph_state =>
@@ -4314,7 +3979,7 @@ begin
 				 end if;
 				 -- write pc hi
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= up_hi_dout;
+			    dout_ctrl  <= up_hi_dout; 
 				 if ea(5) = '1' then
  				   next_state   <= pshs_iyl_state;
 				 elsif ea(4) = '1' then
@@ -4340,7 +4005,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write iy low
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= iy_lo_dout;
+			    dout_ctrl  <= iy_lo_dout; 
              next_state <= pshs_iyh_state;
 
 			  when pshs_iyh_state =>
@@ -4355,7 +4020,7 @@ begin
 				 end if;
 				 -- write iy hi
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= iy_hi_dout;
+			    dout_ctrl  <= iy_hi_dout; 
 				 if ea(4) = '1' then
  				   next_state   <= pshs_ixl_state;
 				 elsif ea(3) = '1' then
@@ -4379,7 +4044,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write ix low
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= ix_lo_dout;
+			    dout_ctrl  <= ix_lo_dout; 
              next_state <= pshs_ixh_state;
 
 			  when pshs_ixh_state =>
@@ -4394,7 +4059,7 @@ begin
 				 end if;
 				 -- write ix hi
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= ix_hi_dout;
+			    dout_ctrl  <= ix_hi_dout; 
 				 if ea(3) = '1' then
  				   next_state   <= pshs_dp_state;
 				 elsif ea(2) = '1' then
@@ -4420,7 +4085,7 @@ begin
 				 end if;
 				 -- write dp
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= dp_dout;
+			    dout_ctrl  <= dp_dout; 
 				 if ea(2) = '1' then
  				   next_state   <= pshs_accb_state;
 				 elsif ea(1) = '1' then
@@ -4444,7 +4109,7 @@ begin
 				 end if;
 				 -- write accb
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= accb_dout;
+			    dout_ctrl  <= accb_dout; 
 				 if ea(1) = '1' then
  				   next_state   <= pshs_acca_state;
 				 elsif ea(0) = '1' then
@@ -4466,7 +4131,7 @@ begin
 				 end if;
 				 -- write acca
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= acca_dout;
+			    dout_ctrl  <= acca_dout; 
 				 if ea(0) = '1' then
  				   next_state   <= pshs_cc_state;
 				 else
@@ -4478,7 +4143,7 @@ begin
              -- idle sp
 				 -- write cc
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= cc_dout;
+			    dout_ctrl  <= cc_dout; 
              lic          <= '1';
              next_state <= fetch_state;
 
@@ -4764,7 +4429,7 @@ begin
              up_ctrl    <= load_up;
 				 -- write pc low
              addr_ctrl  <= pushu_ad;
-			    dout_ctrl  <= pc_lo_dout;
+			    dout_ctrl  <= pc_lo_dout; 
              next_state <= pshu_pch_state;
 
 			  when pshu_pch_state =>
@@ -4779,7 +4444,7 @@ begin
 				 end if;
 				 -- write pc hi
              addr_ctrl  <= pushu_ad;
-			    dout_ctrl  <= pc_hi_dout;
+			    dout_ctrl  <= pc_hi_dout; 
 				 if ea(6) = '1' then
                next_state   <= pshu_spl_state;
 				 elsif ea(5) = '1' then
@@ -4807,7 +4472,7 @@ begin
              up_ctrl    <= load_up;
 				 -- write sp low
              addr_ctrl  <= pushu_ad;
-			    dout_ctrl  <= sp_lo_dout;
+			    dout_ctrl  <= sp_lo_dout; 
              next_state <= pshu_sph_state;
 
 			  when pshu_sph_state =>
@@ -4822,7 +4487,7 @@ begin
 				 end if;
 				 -- write sp hi
              addr_ctrl  <= pushu_ad;
-			    dout_ctrl  <= sp_hi_dout;
+			    dout_ctrl  <= sp_hi_dout; 
 				 if ea(5) = '1' then
  				   next_state   <= pshu_iyl_state;
 				 elsif ea(4) = '1' then
@@ -4848,7 +4513,7 @@ begin
              up_ctrl    <= load_up;
 				 -- write iy low
              addr_ctrl  <= pushu_ad;
-			    dout_ctrl  <= iy_lo_dout;
+			    dout_ctrl  <= iy_lo_dout; 
              next_state <= pshu_iyh_state;
 
 			  when pshu_iyh_state =>
@@ -4863,7 +4528,7 @@ begin
 				 end if;
 				 -- write iy hi
              addr_ctrl  <= pushu_ad;
-			    dout_ctrl  <= iy_hi_dout;
+			    dout_ctrl  <= iy_hi_dout; 
 				 if ea(4) = '1' then
  				   next_state   <= pshu_ixl_state;
 				 elsif ea(3) = '1' then
@@ -4887,7 +4552,7 @@ begin
              up_ctrl    <= load_up;
 				 -- write ix low
              addr_ctrl  <= pushu_ad;
-			    dout_ctrl  <= ix_lo_dout;
+			    dout_ctrl  <= ix_lo_dout; 
              next_state <= pshu_ixh_state;
 
 			  when pshu_ixh_state =>
@@ -4902,7 +4567,7 @@ begin
 				 end if;
 				 -- write ix hi
              addr_ctrl  <= pushu_ad;
-			    dout_ctrl  <= ix_hi_dout;
+			    dout_ctrl  <= ix_hi_dout; 
 				 if ea(3) = '1' then
  				   next_state   <= pshu_dp_state;
 				 elsif ea(2) = '1' then
@@ -4928,7 +4593,7 @@ begin
 				 end if;
 				 -- write dp
              addr_ctrl  <= pushu_ad;
-			    dout_ctrl  <= dp_dout;
+			    dout_ctrl  <= dp_dout; 
 				 if ea(2) = '1' then
  				   next_state   <= pshu_accb_state;
 				 elsif ea(1) = '1' then
@@ -4952,7 +4617,7 @@ begin
 				 end if;
 				 -- write accb
              addr_ctrl  <= pushu_ad;
-			    dout_ctrl  <= accb_dout;
+			    dout_ctrl  <= accb_dout; 
 				 if ea(1) = '1' then
  				   next_state   <= pshu_acca_state;
 				 elsif ea(0) = '1' then
@@ -4974,7 +4639,7 @@ begin
 				 end if;
 				 -- write acca
              addr_ctrl  <= pushu_ad;
-			    dout_ctrl  <= acca_dout;
+			    dout_ctrl  <= acca_dout; 
 				 if ea(0) = '1' then
  				   next_state   <= pshu_cc_state;
 				 else
@@ -4986,7 +4651,7 @@ begin
              -- idle up
 				 -- write cc
              addr_ctrl  <= pushu_ad;
-			    dout_ctrl  <= cc_dout;
+			    dout_ctrl  <= cc_dout; 
              lic        <= '1';
              next_state <= fetch_state;
 
@@ -5477,7 +5142,7 @@ begin
 			    else
 				   next_state <= int_cwai_state;
              end if;
-
+			  
            --
 			  -- State to mask I Flag and F Flag (NMI)
 			  --
@@ -5520,7 +5185,7 @@ begin
              alu_ctrl   <= alu_see;
              cc_ctrl    <= load_cc;
              next_state <= int_pcl_state;
-
+				 
 			  --
 			  -- clear Entire Flag on FIRQ
 			  -- before stacking all registers
@@ -5539,7 +5204,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write pc low
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= pc_lo_dout;
+			    dout_ctrl  <= pc_lo_dout; 
              next_state <= int_pch_state;
 
 			  when int_pch_state =>
@@ -5550,7 +5215,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write pc hi
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= pc_hi_dout;
+			    dout_ctrl  <= pc_hi_dout; 
 				 if cc(EBIT) = '1' then
                next_state   <= int_upl_state;
 				 else
@@ -5565,7 +5230,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write up low
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= up_lo_dout;
+			    dout_ctrl  <= up_lo_dout; 
              next_state <= int_uph_state;
 
 			  when int_uph_state =>
@@ -5576,7 +5241,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write ix hi
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= up_hi_dout;
+			    dout_ctrl  <= up_hi_dout; 
              next_state <= int_iyl_state;
 
 			  when int_iyl_state =>
@@ -5587,7 +5252,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write ix low
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= iy_lo_dout;
+			    dout_ctrl  <= iy_lo_dout; 
              next_state <= int_iyh_state;
 
 			  when int_iyh_state =>
@@ -5598,7 +5263,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write ix hi
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= iy_hi_dout;
+			    dout_ctrl  <= iy_hi_dout; 
              next_state <= int_ixl_state;
 
 			  when int_ixl_state =>
@@ -5609,7 +5274,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write ix low
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= ix_lo_dout;
+			    dout_ctrl  <= ix_lo_dout; 
              next_state <= int_ixh_state;
 
 			  when int_ixh_state =>
@@ -5620,7 +5285,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write ix hi
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= ix_hi_dout;
+			    dout_ctrl  <= ix_hi_dout; 
              next_state <= int_dp_state;
 
 			  when int_dp_state =>
@@ -5631,7 +5296,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write accb
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= dp_dout;
+			    dout_ctrl  <= dp_dout; 
              next_state <= int_accb_state;
 
 			  when int_accb_state =>
@@ -5642,7 +5307,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write accb
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= accb_dout;
+			    dout_ctrl  <= accb_dout; 
              next_state <= int_acca_state;
 
 			  when int_acca_state =>
@@ -5653,7 +5318,7 @@ begin
              sp_ctrl    <= load_sp;
 				 -- write acca
              addr_ctrl  <= pushs_ad;
-			    dout_ctrl  <= acca_dout;
+			    dout_ctrl  <= acca_dout; 
              next_state <= int_cc_state;
 
 			  when int_cc_state =>
@@ -5664,8 +5329,8 @@ begin
 
 			  --
 			  -- According to the 6809 programming manual:
-			  -- If an interrupt is received and is masked
-			  -- or lasts for less than three cycles, the PC
+			  -- If an interrupt is received and is masked 
+			  -- or lasts for less than three cycles, the PC 
 			  -- will advance to the next instruction.
 			  -- If an interrupt is unmasked and lasts
 			  -- for more than three cycles, an interrupt
@@ -5690,7 +5355,7 @@ begin
 				else
 	            next_state <= sync_state;
             end if;
-
+				
 			  when halt_state =>
            --
            -- 2011-10-30 John Kent
@@ -5716,6 +5381,27 @@ begin
         if fic = '1' then
         		   --
 					case op_code(7 downto 6) is
+					--
+					-- ver 1.29 
+					-- hide last cycle of multiply in fetch
+					--
+					when "00" =>
+					  case op_code(5 downto 0) is
+					  when "111101" => -- mul
+					    -- if bit 7 of ea set, add accd to md
+                   left_ctrl  <= accd_left;
+					    if ea(7) = '1' then
+                     right_ctrl <= md_right;
+					    else
+                     right_ctrl <= zero_right;
+					    end if;
+                   alu_ctrl   <= alu_mul;
+                   cc_ctrl    <= load_cc;
+                   acca_ctrl  <= load_hi_acca;
+                   accb_ctrl  <= load_accb;
+                 when others =>
+					     null;
+					  end case;
 					when "10" => -- acca
 				     case op_code(3 downto 0) is
 					  when "0000" => -- suba
@@ -5976,3 +5662,4 @@ begin
 end process;
 
 end rtl;
+	

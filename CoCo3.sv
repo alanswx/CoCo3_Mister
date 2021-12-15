@@ -196,7 +196,7 @@ localparam  CONF_STR = {
         "FD,BIN,Load COCO Font;",
 		  "-;",
         //"OCD,Cart Slot,Orch 90,Large Disk Rom,Cart Load,Disk;",
-        "OCD,Cart Slot,Orch 90,ECB / Cart,Disk;",
+        "OCD,Multi-Pak Slot,Orch 90,ECB / Cart,Disk;",
         "-;",
         "H2S0,DSK,Load Disk Drive 0;",
         "H2S1,DSK,Load Disk Drive 1;",

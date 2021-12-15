@@ -128,7 +128,7 @@ input	[9:0]  		SWITCH,
 
 // roms, cartridges, etc
 input	[7:0]		ioctl_data,
-input	[15:0]		ioctl_addr,
+input	[24:0]		ioctl_addr,
 input				ioctl_download,
 input				ioctl_wr,
 input 	[15:0]		ioctl_index,
@@ -976,10 +976,15 @@ localparam 	[1:0]	BOOT1 = 2'd1;
 localparam 	[1:0]	BOOT2 = 2'd2;
 
 localparam	[5:0]	BOOT  = 6'd0;
+localparam	[5:0]	OSD_ROM_LOAD  = 6'd10;
 
-wire			COCO3_ROM_WRITE = (ioctl_index[7:0] == {BOOT0, BOOT}) & ioctl_wr;
-wire			COCO3_DISKROM_WRITE = (ioctl_index[7:0] == {BOOT1, BOOT}) & ioctl_wr;
-wire			COCO3_ORCH90_ROM_WRITE = (ioctl_index[7:0] == {BOOT2, BOOT}) & ioctl_wr;
+wire			COCO3_ROM_BUNDLE = 		(ioctl_addr[24:15] == 10'b0000000000);
+wire			COCO3_DISKROM_BUNDLE = 	(ioctl_addr[24:13] == 12'b000000000100);
+wire			COCO3_ORCHROM_BUNDLE = 	(ioctl_addr[24:13] == 12'b000000000101);
+
+wire			COCO3_ROM_WRITE = ((ioctl_index[7:0] == {BOOT0, BOOT}) | ((ioctl_index[5:0] == OSD_ROM_LOAD) & COCO3_ROM_BUNDLE)) & ioctl_wr;
+wire			COCO3_DISKROM_WRITE = ((ioctl_index[7:0] == {BOOT1, BOOT}) | ((ioctl_index[5:0] == OSD_ROM_LOAD) & COCO3_DISKROM_BUNDLE)) & ioctl_wr;
+wire			COCO3_ORCH90_ROM_WRITE = ((ioctl_index[7:0] == {BOOT2, BOOT}) | ((ioctl_index[5:0] == OSD_ROM_LOAD) & COCO3_ORCHROM_BUNDLE)) & ioctl_wr;
 
 
 //COCO_ROM CC3_ROM(
@@ -1782,7 +1787,7 @@ end
 // CPU section copyrighted by John Kent
 cpu09 GLBCPU09(
 	.clk(clk_sys),
-	.ce(cpu_ena),
+//	.ce(cpu_ena),
 	.rst(CPU_RESET),
 	.vma(VMA),
 	.addr(ADDRESS),
@@ -1790,7 +1795,7 @@ cpu09 GLBCPU09(
 	.data_in(DATA_IN),
 	.data_out(DATA_OUT),
 	.halt(HALT),
-	.hold(hold),
+	.hold(hold | ~cpu_ena),
 	.irq(!CPU_IRQ_N),
 	.firq(!CPU_FIRQ_N),
 	.nmi(NMI_09)
