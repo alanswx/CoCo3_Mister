@@ -163,12 +163,12 @@ module emu
 //`define SOUND_DBG
 //assign CE_PIXEL=1;
 
-assign {UART_RTS, UART_TXD, UART_DTR} = 0;
+//assign {UART_RTS, UART_TXD, UART_DTR} = 0;
 assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 //assign USER_OUT = '1;
 assign {DDRAM_CLK, DDRAM_BURSTCNT, DDRAM_ADDR, DDRAM_DIN, DDRAM_BE, DDRAM_RD, DDRAM_WE} = 0;
 assign ADC_BUS  = 'Z;
-assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
+//assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
 assign BUTTONS = 0;
 
 
@@ -190,10 +190,8 @@ assign VIDEO_ARY = (!ar) ? 12'd3 : 12'd0;
 
 `include "build_id.v"
 localparam  CONF_STR = {
-        "COCO3;;",
+        "COCO3;UART19200:9600:4800:2400:1200:300;",
         "-;",
-//        "FD,BIN,Load COCO Font;", // Move to Debug
-//		  "-;",
         "OCD,Multi-Pak Slot,Orch 90,ECB / Cart,Disk;",
         "-;",
         "H2S0,DSK,Load Disk Drive 0;",
@@ -217,12 +215,22 @@ localparam  CONF_STR = {
 		  "P1OL,Artifact Color,Off - SG4,On - SG6;",
 		  "P1OI,Artifact Color Set,0,1;",
         "-;",
+        "P2,Debug Menu;",
+        "P2-;",
+        "P2-, -= Debug Menu =-;",
+        "P2-;",
+        "P2FD,BIN,Load COCO Font;", 
+		  "P2OG,Cart Interrupt Disabled,OFF,ON;",
+        //P2O?,Force Disk 0 DS,Off,On;"
+        //P2O?,Force Disk 1 DS,Off,On;"
+        "-;",
 
+		  
+		  
 		  "O6,Swap Joysticks,Off,On;",
 		  "RA,Easter Egg;",
 		  "-;",
 		  "OJK,Turbo Speed:,1.78 Mhz,3.58 Mhz,7.16 Mhz, NA;",
-//		  "OG,Cart Interrupt Disabled,OFF,ON;", // Move to Debug
 		  
 		  
 		  
@@ -532,7 +540,15 @@ coco3fpga coco3 (
   
   .sdram_busy(sdram_busy),
   
-  .turbo_speed(turbo_speed)
+  .turbo_speed(turbo_speed),
+
+	.UART_TXD(UART_TXD),
+	.UART_RXD(UART_RXD),
+	.UART_RTS(UART_RTS),
+	.UART_CTS(UART_CTS),
+	.UART_DTR(UART_DTR),
+	.UART_DSR(UART_DSR)
+  
 
 );
 

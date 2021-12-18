@@ -106,6 +106,15 @@ input				ps2_clk,
 input				ps2_data,
 
 // RS-232
+output	UART_TXD,
+input 	UART_RXD,
+output 	UART_RTS,
+input 	UART_CTS,
+output	UART_DTR,
+input 	UART_DSR,
+
+
+
 output				DE1TXD,
 input				DE1RXD,
 output				OPTTXD,
@@ -4605,14 +4614,16 @@ glb6551 RS232(
 .CS({1'b0, RS232_EN}),
 .RW_N(RW_N),
 .RS(ADDRESS[1:0]),
-.TXDATA_OUT(UART51_TXD),
-.RXDATA_IN(UART51_RXD),
-.RTS(UART51_RTS),
-.CTS(UART51_RTS),
-.DCD(UART51_DTR),
-.DTR(UART51_DTR),
-.DSR(UART51_DTR)
+.TXDATA_OUT(UART_TXD),
+.RXDATA_IN(UART_RXD),
+.RTS(UART_RTS),
+.CTS(UART_CTS),
+.DCD(1'b1),
+.DTR(UART_DTR),
+.DSR(UART_DSR)
 );
+
+
 
 
 endmodule
