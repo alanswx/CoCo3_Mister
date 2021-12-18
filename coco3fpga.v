@@ -1521,6 +1521,7 @@ begin
 end
 */
 // 14.814814815 MHz / 8 = 1.851851852 MHz / 16 = 115740.741 = 115200 + 0.469393%
+// CLK_57
 always @(negedge clk_sys or negedge RESET_N)
 begin
 	if(!RESET_N)
@@ -4601,12 +4602,32 @@ coco3_Char_ROM coco3_Char_ROM(
     .DATA_W(Font_ROM_Data_Buf)
 );
 
+
+reg     [4:0]           CLK_6551;
+// 14.31818
+// 50 MHz / 27 = 1.852 MHz
+always @(negedge CLK50MHZ or negedge RESET_N)
+begin
+        if(!RESET_N)
+                CLK_6551 <= 5'd0;
+        else
+                case(CLK_6551)
+                5'd26:
+                        CLK_6551 <= 5'd0;
+                default:
+                        CLK_6551 <= CLK_6551 + 1'b1;
+                endcase
+end
+
+
 // RS232PAK UART
 glb6551 RS232(
 .RESET_N(RESET_N),
 .RX_CLK(RX_CLK2),
-.RX_CLK_IN(COM2_STATE[2]),
-.XTAL_CLK_IN(COM2_STATE[2]),
+.RX_CLK_IN(CLK_6551[4]),
+.XTAL_CLK_IN(CLK_6551[4]),
+//.RX_CLK_IN(COM2_STATE[2]),
+//.XTAL_CLK_IN(COM2_STATE[2]),
 .PH_2(PH_2),
 .DI(DATA_OUT),
 .DO(DATA_RS232),
