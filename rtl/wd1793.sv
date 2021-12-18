@@ -6,6 +6,7 @@
 //  Copyright (C) 2016 Sorgelig
 //
 //	Modifications for track size of 18 x 256 by Stan Hodge (SRH) 9/6/21
+//	Modifications not to reset the track and sector registers by SRH 12/18/21
 //
 //  This program is free software; you can redistribute it and/or modify it
 //  under the terms of the GNU General Public License as published by the Free
@@ -323,9 +324,9 @@ always @(posedge clk_sys) begin
 		write_data <= 0;
 		multisector <= 0;
 		step_direction <= 0;
-		disk_track <= 0;
-		wdreg_track <= 0;
-		wdreg_sector <= 0;
+//		disk_track <= 0;
+//		wdreg_track <= 0;
+//		wdreg_sector <= 0;
 		wdreg_data <= 0;
 		data_length <= 0;
 		byte_addr <=0;

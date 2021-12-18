@@ -719,7 +719,7 @@ reg 			cpu_ena;
 // Probe's defined
 //assign PROBE[6:0] = {CART1_POL, CART1_BUF_RESET_N, CART1_FIRQ_STAT_N, CART1_CLK_N, CART1_FIRQ_N, RESET_N, PH_2};
 //assign PROBE[7:0] = {1'b0, CART1_POL, CART1_FIRQ_N, CART1_FIRQ_BUF[0], CART1_CLK_N_D, CART1_FIRQ_RESET_N, CART1_CLK_N, PH_2};
-assign PROBE[7:0] = {2'b00, COCO3_DISKROM_WRITE, COCO3_ROM_WRITE, ioctl_wr, ioctl_download, ioctl_index[7], ioctl_index[6]};
+assign PROBE[7:0] = {2'b00, cache_hit, COCO3_ROM_WRITE, ioctl_wr, ioctl_download, ioctl_index[7], ioctl_index[6]};
 assign PROBE[15:8] = LEDR[7:0];
 assign PROBE[23:16] = LEDG[7:0];
 //assign PROBE[31:24] = {3'b000, DATA_OUT[3], MOTOR, DRIVE_SEL_EXT[0], HDD_EN, ADDRESS[0]};
@@ -1546,6 +1546,10 @@ end
 
 assign sdram_cpu_addr = {4'b0000, BLOCK_ADDRESS[7:0], ADDRESS[12:1], ADDRESS[0]};
 assign sdram_cpu_din = DATA_OUT;
+reg		[24:0]	sdram_cpu_addr_L;
+
+wire	cache_hit  /* synthesis preserve */;
+assign	cache_hit = (sdram_cpu_addr[24:1] == sdram_cpu_addr_L[24:1]);
 
 //BANKS
 // CPU clock / SRAM Signals for old SRAM
@@ -1567,6 +1571,7 @@ begin
 		clear_data_ready <= 1'b1;
 		sdram_cpu_req <= 1'b0;
 		sdram_cpu_rnw <= 1'b1;
+		sdram_cpu_addr_L <= 24'h000000;
 	end
 	else
 	begin
@@ -1598,26 +1603,38 @@ begin
 		case (CLK)
 		6'h00:
 		begin
-			SWITCH_L <= {turbo_speed, RATE};					// Normal speed
+			SWITCH_L <= {turbo_speed, RATE};				// Normal speed
 			CLK <= 6'h01;
 			PH_2_RAW <= 1'b1;
 			RAM0_BE0_N <=  !RAM0_BE0;						// Delete?
 			RAM0_BE1_N <=  !RAM0_BE1;
 
 			if (~(hold | end_hold))	// Make sure we are not in a cycle before starting one....
-				cpu_ena <= 1'b1;
-				
-			if (VMA & RAM_CS & ~(hold | end_hold))  // This solves clearing and asserting hold on the same clk
+									// If we are still in one - we skip this cpu_enable cycle
 			begin
-//				sdram memory cycle
-//				start hold and get which byte
-				hold <= 1'b1;
-				RAM0_BE0_L <=  !ADDRESS[0];
-				RAM0_BE1_L <=  ADDRESS[0];
+				cpu_ena <= 1'b1;
 
-				sdram_cpu_req <= 1'b1;
-				sdram_cpu_rnw <= RW_N;
+				if (VMA & RAM_CS)
+				begin
+//					sdram memory cycle
+//					get which byte
+					RAM0_BE0_L <=  !ADDRESS[0];
+					RAM0_BE1_L <=  ADDRESS[0];
+
+					if (RW_N & cache_hit)					// Read cache hit on stored on 16 hold_data value?
+					begin
+						end_hold <= 1'b1;					// If so then end the cpu_ena cycle with the updated byte enable
+					end
+					else
+					begin
+						sdram_cpu_addr_L <= sdram_cpu_addr;	// Else set hold and start a sdram cycle
+						hold <= 1'b1;
+						sdram_cpu_req <= 1'b1;
+						sdram_cpu_rnw <= RW_N;
+					end
+				end
 			end
+			
 
 //***************************************
 // Gart

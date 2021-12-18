@@ -192,8 +192,8 @@ assign VIDEO_ARY = (!ar) ? 12'd3 : 12'd0;
 localparam  CONF_STR = {
         "COCO3;;",
         "-;",
-        "FD,BIN,Load COCO Font;",
-		  "-;",
+//        "FD,BIN,Load COCO Font;", // Move to Debug
+//		  "-;",
         "OCD,Multi-Pak Slot,Orch 90,ECB / Cart,Disk;",
         "-;",
         "H2S0,DSK,Load Disk Drive 0;",
@@ -222,7 +222,7 @@ localparam  CONF_STR = {
 		  "RA,Easter Egg;",
 		  "-;",
 		  "OJK,Turbo Speed:,1.78 Mhz,3.58 Mhz,7.16 Mhz, NA;",
-//		  "OG,Cart Interrupt Disabled,OFF,ON;",
+//		  "OG,Cart Interrupt Disabled,OFF,ON;", // Move to Debug
 		  
 		  
 		  

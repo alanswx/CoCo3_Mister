@@ -227,6 +227,7 @@ reg				clk_8Mhz_enable_found;
 reg				second_clk_8Mhz_enable_found;
 reg				read1;
 reg				write1;
+reg		[1:0]	ADDRESS_L;
 
 assign RD[0] = (read || RD_E[0])  && (drive_index == 3'd0);
 assign RD[1] = (read || RD_E[1])  && (drive_index == 3'd1);
@@ -237,6 +238,10 @@ assign RD[3] = (read || RD_E[3])  && (drive_index == 3'd3);
 // For writes we will buffer the data out to ensure it does not go away.
 // For reads it is expected that data is available asynchronusly at the cpu rate and the only reason to catch a 
 // 8Mhz edge is to update pointer and misc flags. 
+
+// This is very nasty code and will likely only work with the present CPU timing.
+// It is heavily dependant on address and write data being available just after
+// the previous cycle.
 
 always @(negedge CLK or negedge RESET_N)
 begin
@@ -273,12 +278,17 @@ begin
 //		delays for edge detection
 		read_d <= read;
 		write_d <= write;
+
+		if ((read1 & ~read) | (write1 & ~write))
+		begin
+//			Latch Address & Data
+			ADDRESS_L <= ADDRESS[1:0];
+			DATA_IN_L <= DATA_IN;
+		end
 		
 //		Synchronus rising edge of write
 		if ((write == 1'b1) && (write_d == 1'b0))
 		begin
-//			Latch Data
-			DATA_IN_L <= DATA_IN;
 //			Set Writes
 			r_w_active <= 1'b1;
 			case (drive_index)
@@ -313,11 +323,12 @@ begin
 		if (ena_8Mhz && r_w_active)
 			clk_8Mhz_enable_found <= 1'b1;
 
-		if (ena_8Mhz && clk_8Mhz_enable_found)
-			second_clk_8Mhz_enable_found <= 1'b1;
+//		if (ena_8Mhz && clk_8Mhz_enable_found)
+//			second_clk_8Mhz_enable_found <= 1'b1;
 
 //		1 50Mhz clock later...
-		if (second_clk_8Mhz_enable_found)
+//		if (second_clk_8Mhz_enable_found)
+		if (clk_8Mhz_enable_found)
 		begin
 			clk_8Mhz_enable_found <= 1'b0;
 			second_clk_8Mhz_enable_found <= 1'b0;
@@ -454,7 +465,7 @@ wd1793 #(1,1) coco_wd1793_0
 	.io_en(1'b1),
 	.rd(RD[0]),
 	.wr(WR[0]),
-	.addr(ADDRESS[1:0]),
+	.addr(ADDRESS_L[1:0]),
 	.din(DATA_IN_L),
 	.dout(dout[0]),
 	.drq(DRQ[0]),
@@ -495,7 +506,7 @@ wd1793 #(1,0) coco_wd1793_1
 	.io_en(1'b1),
 	.rd(RD[1]),
 	.wr(WR[1]),
-	.addr(ADDRESS[1:0]),
+	.addr(ADDRESS_L[1:0]),
 	.din(DATA_IN_L),
 	.dout(dout[1]),
 	.drq(DRQ[1]),
@@ -536,7 +547,7 @@ wd1793 #(1,0) coco_wd1793_2
 	.io_en(1'b1),
 	.rd(RD[2]),
 	.wr(WR[2]),
-	.addr(ADDRESS[1:0]),
+	.addr(ADDRESS_L[1:0]),
 	.din(DATA_IN_L),
 	.dout(dout[2]),
 	.drq(DRQ[2]),
@@ -577,7 +588,7 @@ wd1793 #(1,0) coco_wd1793_3
 	.io_en(1'b1),
 	.rd(RD[3]),
 	.wr(WR[3]),
-	.addr(ADDRESS[1:0]),
+	.addr(ADDRESS_L[1:0]),
 	.din(DATA_IN_L),
 	.dout(dout[3]),
 	.drq(DRQ[3]),
