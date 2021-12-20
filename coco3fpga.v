@@ -1044,7 +1044,7 @@ COCO_ROM_CART CC3_ROM_CART(
 .CLK(~clk_sys),
 .WR_ADDR(ioctl_addr[15:0]),
 .WR_DATA(ioctl_data[7:0]),
-.WRITE((ioctl_index[5:0] == 6'd11) & ioctl_wr)
+.WRITE((ioctl_index[5:0] == 6'd1) & ioctl_wr)
 );
 
 wire write_to_cart_0;
@@ -1071,7 +1071,7 @@ begin
 			
 		if (write_to_cart_0)
 			adrs_monitor <= 1'b0;
-		if ((ioctl_index[6:0] == 7'd11) & ioctl_wr)
+		if ((ioctl_index[5:0] == 6'd1) & ioctl_wr)
 			adrs_monitor <= adrs_monitor | ioctl_addr[14];
 	end
 end
@@ -1557,9 +1557,11 @@ end
 assign sdram_cpu_addr = {4'b0000, BLOCK_ADDRESS[7:0], ADDRESS[12:1], ADDRESS[0]};
 assign sdram_cpu_din = DATA_OUT;
 reg		[24:0]	sdram_cpu_addr_L;
+reg				last_write;
 
 wire	cache_hit  /* synthesis preserve */;
 assign	cache_hit = (sdram_cpu_addr[24:1] == sdram_cpu_addr_L[24:1]);
+//assign	cache_hit = 1'b0;
 
 //BANKS
 // CPU clock / SRAM Signals for old SRAM
@@ -1582,6 +1584,7 @@ begin
 		sdram_cpu_req <= 1'b0;
 		sdram_cpu_rnw <= 1'b1;
 		sdram_cpu_addr_L <= 24'h000000;
+		last_write <= 1'b1;
 	end
 	else
 	begin
@@ -1631,7 +1634,7 @@ begin
 					RAM0_BE0_L <=  !ADDRESS[0];
 					RAM0_BE1_L <=  ADDRESS[0];
 
-					if (RW_N & cache_hit)					// Read cache hit on stored on 16 hold_data value?
+					if (RW_N & cache_hit & ~last_write)		// Read cache hit on stored on 16 hold_data value?
 					begin
 						end_hold <= 1'b1;					// If so then end the cpu_ena cycle with the updated byte enable
 					end
@@ -1641,6 +1644,7 @@ begin
 						hold <= 1'b1;
 						sdram_cpu_req <= 1'b1;
 						sdram_cpu_rnw <= RW_N;
+						last_write <= ~RW_N;
 					end
 				end
 			end
@@ -1944,7 +1948,7 @@ begin
 			else
 				cart_firq_enable <= SWITCH[4];
 
-		if ((ioctl_index[6:0] == 7'd1) & ioctl_wr)
+		if ((ioctl_index[5:0] == 6'd1) & ioctl_wr)
 		begin
 			firq_trig <= 1'b1;
 			firq_tmr <= 16'h0000;
@@ -4597,7 +4601,7 @@ coco3_Char_ROM coco3_Char_ROM(
 	.CLK(clk_sys),
 	.ADDR_R({Font_ROM_Upper_Select, font_adrs}),
 	.ADDR_W(Font_ROM_Adrs_Buf),
-	.WE(((ioctl_index[5:0] == 7'd13) & ioctl_wr) | Font_ROM_Mach_WE), // Can be just Font_ROM_Mach_WE if no MISTer
+	.WE(((ioctl_index[5:0] == 6'd3) & ioctl_wr) | Font_ROM_Mach_WE), // Can be just Font_ROM_Mach_WE if no MISTer
     .DATA_R(font_data),
     .DATA_W(Font_ROM_Data_Buf)
 );

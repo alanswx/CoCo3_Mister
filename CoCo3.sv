@@ -198,10 +198,10 @@ localparam  CONF_STR = {
         "H2S1,DSK,Load Disk Drive 1;",
         "H2S2,DSK,Load Disk Drive 2;",
         "H2S3,DSK,Load Disk Drive 3;",
-        "H1FB,CCC,Load Cartridge;",
+        "H1F1,CCC,Load Cartridge;",
         "-;",
 
-        "FC,CAS,Load Cassette;",
+        "F2,CAS,Load Cassette;",
         "TF,Stop & Rewind;",
         "OH,Monitor Tape Sound,No,Yes;",
 		  
@@ -219,7 +219,7 @@ localparam  CONF_STR = {
         "P2-;",
         "P2-, -= Debug Menu =-;",
         "P2-;",
-        "P2FD,BIN,Load COCO Font;", 
+        "P2F3,BIN,Load COCO Font;", 
 		  "P2OG,Cart Interrupt Disabled,OFF,ON;",
         //P2O?,Force Disk 0 DS,Off,On;"
         //P2O?,Force Disk 1 DS,Off,On;"
@@ -559,8 +559,8 @@ wire [1:0] turbo_speed = status[20:19];
 wire cpu_speed = status[11];
 wire [1:0] mpi = (status[13:12]==2'b00)  ? 2'b00  : status[13:12]==2'b01 ? 2'b10 : status[13:12]==2'b10 ? 2'b11 : 2'b00;		
 wire video=status[14];
-//wire cartint=status[16];
-wire cartint = 1'b0;
+wire cartint=status[16];
+//wire cartint = 1'b0;
 wire sg4v6 = status[21];
 
 wire PHASE = status[18];
@@ -629,7 +629,7 @@ sdram_32r8w coco3_sdram
 
 wire casdout;
 wire cas_relay;
-wire load_tape = ioctl_index == 12;
+wire load_tape = ioctl_index == 2;
 
 wire	[15:0]	ram_addr;
 wire	[7:0]	ram_data_o;
