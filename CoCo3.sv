@@ -226,7 +226,7 @@ localparam  CONF_STR = {
         "-;",
 
 		  
-		  
+		  "ON,D-Pad Joystick emu,No,Yes;",
 		  "O6,Swap Joysticks,Off,On;",
 		  "RA,Easter Egg;",
 		  "-;",
@@ -475,9 +475,11 @@ coco3fpga coco3 (
   .ps2_clk(ps2_kbd_clk),
   .ps2_data(ps2_kbd_data),
 
+  .joy_use_dpad(digitalJoy),
 
-//  .joy1(coco_joy1),
-//  .joy2(coco_joy2),
+
+  .joy1(coco_joy1),
+  .joy2(coco_joy2),
 
   .joya1(coco_ajoy1),
   .joya2(coco_ajoy2),
@@ -566,6 +568,8 @@ wire sg4v6 = status[21];
 wire PHASE = status[18];
 
 wire coldboot = status[22];
+
+wire digitalJoy = status[23];
 
 reg	[2:0] mpi_d	= 2'b00;
 reg first_mpi_chg = 1'b0;
